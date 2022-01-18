@@ -42,6 +42,7 @@ cd $(ProjectDir)
     <NASM>
       <PreprocessorDefinitions>private_prefix=ass;HAVE_CPUNOP=0;PREFIX;WIN32=1;ARCH_X86_64=0;HAVE_ALIGNED_STACK=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <IncludePaths>$(ProjectDir)\..\libass;%(IncludePaths)</IncludePaths>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </NASM>
     <CustomBuildStep>
       <Message>Custom Clean Step</Message>
@@ -87,6 +88,7 @@ cd $(ProjectDir)
     <NASM>
       <PreprocessorDefinitions>private_prefix=ass;HAVE_CPUNOP=0;WIN32=1;ARCH_X86_64=1;HAVE_ALIGNED_STACK=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <IncludePaths>$(ProjectDir)\..\libass;%(IncludePaths)</IncludePaths>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </NASM>
     <CustomBuildStep>
       <Message>Custom Clean Step</Message>
@@ -133,6 +135,7 @@ cd $(ProjectDir)
     <NASM>
       <PreprocessorDefinitions>private_prefix=ass;HAVE_CPUNOP=0;PREFIX;WIN32=1;ARCH_X86_64=0;HAVE_ALIGNED_STACK=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <IncludePaths>$(ProjectDir)\..\libass;%(IncludePaths)</IncludePaths>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </NASM>
     <CustomBuildStep>
       <Message>Custom Clean Step</Message>
@@ -179,6 +182,7 @@ cd $(ProjectDir)
     <NASM>
       <PreprocessorDefinitions>private_prefix=ass;HAVE_CPUNOP=0;WIN32=1;ARCH_X86_64=1;HAVE_ALIGNED_STACK=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <IncludePaths>$(ProjectDir)\..\libass;%(IncludePaths)</IncludePaths>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </NASM>
     <CustomBuildStep>
       <Message>Custom Clean Step</Message>
@@ -224,6 +228,7 @@ cd $(ProjectDir)
     <NASM>
       <PreprocessorDefinitions>private_prefix=ass;HAVE_CPUNOP=0;PREFIX;WIN32=1;ARCH_X86_64=0;HAVE_ALIGNED_STACK=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <IncludePaths>$(ProjectDir)\..\libass;%(IncludePaths)</IncludePaths>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </NASM>
     <CustomBuildStep>
       <Message>Custom Clean Step</Message>
@@ -269,6 +274,7 @@ cd $(ProjectDir)
     <NASM>
       <PreprocessorDefinitions>private_prefix=ass;HAVE_CPUNOP=0;WIN32=1;ARCH_X86_64=1;HAVE_ALIGNED_STACK=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <IncludePaths>$(ProjectDir)\..\libass;%(IncludePaths)</IncludePaths>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </NASM>
     <CustomBuildStep>
       <Message>Custom Clean Step</Message>
@@ -315,6 +321,7 @@ cd $(ProjectDir)
     <NASM>
       <PreprocessorDefinitions>private_prefix=ass;HAVE_CPUNOP=0;PREFIX;WIN32=1;ARCH_X86_64=0;HAVE_ALIGNED_STACK=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <IncludePaths>$(ProjectDir)\..\libass;%(IncludePaths)</IncludePaths>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </NASM>
     <CustomBuildStep>
       <Message>Custom Clean Step</Message>
@@ -361,6 +368,7 @@ cd $(ProjectDir)
     <NASM>
       <PreprocessorDefinitions>private_prefix=ass;HAVE_CPUNOP=0;PREFIX;WIN32=1;ARCH_X86_64=0;HAVE_ALIGNED_STACK=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <IncludePaths>$(ProjectDir)\..\libass;%(IncludePaths)</IncludePaths>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </NASM>
     <CustomBuildStep>
       <Message>Custom Clean Step</Message>
@@ -407,6 +415,7 @@ cd $(ProjectDir)
     <NASM>
       <PreprocessorDefinitions>private_prefix=ass;HAVE_CPUNOP=0;WIN32=1;ARCH_X86_64=1;HAVE_ALIGNED_STACK=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <IncludePaths>$(ProjectDir)\..\libass;%(IncludePaths)</IncludePaths>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </NASM>
     <CustomBuildStep>
       <Message>Custom Clean Step</Message>
@@ -453,6 +462,7 @@ cd $(ProjectDir)
     <NASM>
       <PreprocessorDefinitions>private_prefix=ass;HAVE_CPUNOP=0;WIN32=1;ARCH_X86_64=1;HAVE_ALIGNED_STACK=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <IncludePaths>$(ProjectDir)\..\libass;%(IncludePaths)</IncludePaths>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
     </NASM>
     <CustomBuildStep>
       <Message>Custom Clean Step</Message>

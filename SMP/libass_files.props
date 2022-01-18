@@ -57,9 +57,7 @@
     <NASM Include="..\libass\x86\blend_bitmaps.asm" />
     <NASM Include="..\libass\x86\blur.asm" />
     <NASM Include="..\libass\x86\cpuid.asm" />
-    <NASM Include="..\libass\x86\gaussian.asm" />
     <NASM Include="..\libass\x86\rasterizer.asm" />
-    <NASM Include="..\libass\x86\utils.asm" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="readme.txt" />
