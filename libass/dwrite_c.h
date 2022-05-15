@@ -177,12 +177,6 @@ typedef struct DWRITE_TEXT_RANGE {
 typedef struct DWRITE_TRIMMING DWRITE_TRIMMING;
 typedef struct DWRITE_UNDERLINE DWRITE_UNDERLINE;
 
-DWRITEAPI HRESULT WINAPI DWriteCreateFactory(
-  DWRITE_FACTORY_TYPE factoryType,
-  REFIID iid,
-  IUnknown **factory
-);
-
 #ifndef __MINGW_DEF_ARG_VAL
 #ifdef __cplusplus
 #define __MINGW_DEF_ARG_VAL(x) = x

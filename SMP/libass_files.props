@@ -9,6 +9,7 @@
     <ClInclude Include="..\libass\ass_directwrite.h" />
     <ClInclude Include="..\libass\ass_directwrite_info_template.h" />
     <ClInclude Include="..\libass\ass_drawing.h" />
+    <ClInclude Include="..\libass\ass_filesystem.h" />
     <ClInclude Include="..\libass\ass_font.h" />
     <ClInclude Include="..\libass\ass_fontconfig.h" />
     <ClInclude Include="..\libass\ass_fontselect.h" />
@@ -24,6 +25,7 @@
     <ClInclude Include="..\libass\ass_types.h" />
     <ClInclude Include="..\libass\ass_utils.h" />
     <ClInclude Include="..\libass\dwrite_c.h" />
+    <ClInclude Include="..\libass\wyhash.h" />
     <ClInclude Include="..\libass\x86\cpuid.h" />
     <ClInclude Include="config.h" />
   </ItemGroup>
@@ -34,6 +36,7 @@
     <ClCompile Include="..\libass\ass_cache.c" />
     <ClCompile Include="..\libass\ass_directwrite.c" />
     <ClCompile Include="..\libass\ass_drawing.c" />
+    <ClCompile Include="..\libass\ass_filesystem.c" />
     <ClCompile Include="..\libass\ass_font.c" />
     <ClCompile Include="..\libass\ass_fontconfig.c" />
     <ClCompile Include="..\libass\ass_fontselect.c" />

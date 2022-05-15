@@ -1,6 +1,9 @@
 /* ASM enabled */
 #define CONFIG_ASM 1
 
+/* targeting a 32 - or 64 - bit x86 host architecture */
+#define ARCH_X86 1
+
 /* found CoreText in System library */
 /* #undef CONFIG_CORETEXT */
 
@@ -71,7 +74,7 @@
 #define HAVE_SYS_TYPES_H 1
 
 /* Define to 1 if you have the <unistd.h> header file. */
-#define HAVE_UNISTD_H 1
+/* #undef HAVE_UNISTD_H */
 
 /* Define to 1 if the system has the type `_Bool'. */
 #define HAVE__BOOL 1

@@ -99,6 +99,12 @@
     <ClInclude Include="..\libass\ass_directwrite_info_template.h">
       <Filter>Header Files\libass</Filter>
     </ClInclude>
+    <ClInclude Include="..\libass\ass_filesystem.h">
+      <Filter>Header Files\libass</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libass\wyhash.h">
+      <Filter>Header Files\libass</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\libass\ass_fontconfig.c">
@@ -161,6 +167,9 @@
     <ClCompile Include="..\libass\ass_outline.c">
       <Filter>Source Files\libass</Filter>
     </ClCompile>
+    <ClCompile Include="..\libass\ass_filesystem.c">
+      <Filter>Source Files\libass</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="libass.def">
@@ -183,13 +192,7 @@
     <NASM Include="..\libass\x86\cpuid.asm">
       <Filter>Source Files\libass\x86</Filter>
     </NASM>
-    <NASM Include="..\libass\x86\gaussian.asm">
-      <Filter>Source Files\libass\x86</Filter>
-    </NASM>
     <NASM Include="..\libass\x86\rasterizer.asm">
-      <Filter>Source Files\libass\x86</Filter>
-    </NASM>
-    <NASM Include="..\libass\x86\utils.asm">
       <Filter>Source Files\libass\x86</Filter>
     </NASM>
   </ItemGroup>
