@@ -295,7 +295,7 @@ static ASS_Track *load_track(ASS_Library *lib,
     return track;
 }
 
-static bool out_of_memory()
+static bool out_of_memory(void)
 {
     printf("Not enough memory!\n");
     return false;
@@ -570,7 +570,7 @@ fail:
     free(pos);
     const char *fmt =
         "Usage: %s ([-i] <input-dir>)+ [-o <output-dir>] [-s <scale:1-8>] [-p <pass-level:0-3>]\n";
-    printf(fmt, argv[0]);
+    printf(fmt, argv[0] ? argv[0] : "compare");
     return NULL;
 }
 

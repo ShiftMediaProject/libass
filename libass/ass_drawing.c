@@ -19,8 +19,6 @@
 #include "config.h"
 #include "ass_compat.h"
 
-#include <ft2build.h>
-#include FT_OUTLINE_H
 #include <math.h>
 #include <stdbool.h>
 #include <limits.h>
@@ -202,8 +200,7 @@ bool ass_drawing_parse(ASS_Outline *outline, ASS_Rect *cbox,
             if (started) {
                 if (!outline_add_segment(outline, OUTLINE_LINE_SEGMENT))
                     goto error;
-                if (!outline_close_contour(outline))
-                    goto error;
+                outline_close_contour(outline);
                 started = false;
             }
             token = token->next;
@@ -251,8 +248,7 @@ bool ass_drawing_parse(ASS_Outline *outline, ASS_Rect *cbox,
     if (started) {
         if (!outline_add_segment(outline, OUTLINE_LINE_SEGMENT))
             goto error;
-        if (!outline_close_contour(outline))
-            goto error;
+        outline_close_contour(outline);
     }
 
     if (lib)

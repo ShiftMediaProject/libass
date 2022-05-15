@@ -8,13 +8,16 @@ libass is a portable subtitle renderer for the ASS/SSA (Advanced Substation Alph
 
 Get it
 ======
-See [GitHub releases](https://github.com/libass/libass/releases) for the latest release 0.15.2 (released 2021-09-12). This is a bug fix release. See the [changelog](https://github.com/libass/libass/blob/master/Changelog) for a detailed list of changes.
+See [GitHub releases](https://github.com/libass/libass/releases) for the latest release 0.16.0 (released 2022-05-12).
+See the [changelog](https://github.com/libass/libass/blob/master/Changelog) for a detailed list of changes.
 
 Source code is available from our [GitHub repository](https://github.com/libass/libass).
 
 Contact
 =======
-Please use the [issue tracker](https://github.com/libass/libass/issues?state=open) to report bugs or feature requests. We have an IRC channel, too. Talk to us on [irc.libera.chat/#libass](irc://irc.libera.chat/libass).
+Please use the [issue tracker](https://github.com/libass/libass/issues?state=open) to report bugs or feature requests.
+
+We have an IRC channel, too. Talk to us on [irc.libera.chat/#libass](https://web.libera.chat/#libass). Note that we cannot be online all the time and we cannot answer IRC questions if you leave the channel. Even if you do not get an immediate response, keep your IRC client open, and we will eventually get back to you.
 
 Related Links
 =============

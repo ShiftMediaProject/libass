@@ -48,10 +48,10 @@
 
 #define ASS_PI 3.14159265358979323846
 
-#if (defined(__i386__) || defined(__x86_64__) || defined(_M_IX86) || defined(_M_X64)) && CONFIG_ASM
-int has_sse2(void);
-int has_avx(void);
-int has_avx2(void);
+#define FEATURE_MASK(feat) (((uint32_t) 1) << (feat))
+
+#if CONFIG_ASM && ARCH_X86
+void ass_cpu_capabilities(bool *sse2, bool *avx2);
 #endif
 
 typedef struct {
@@ -182,42 +182,10 @@ static inline int double_to_d22(double x)
     return lrint(x * 0x400000);
 }
 
-#define FNV1_32A_INIT 0x811c9dc5U
-#define FNV1_32A_PRIME 16777619U
-
-static inline uint32_t fnv_32a_buf(const void *buf, size_t len, uint32_t hval)
+static inline int32_t lshiftwrapi(int32_t i, int32_t shift)
 {
-    if (!len)
-        return hval;
-
-    const uint8_t *bp = buf;
-    size_t n = (len + 3) / 4;
-
-    switch (len % 4) {
-    case 0: do { hval ^= *bp++; hval *= FNV1_32A_PRIME; //-fallthrough
-    case 3:      hval ^= *bp++; hval *= FNV1_32A_PRIME; //-fallthrough
-    case 2:      hval ^= *bp++; hval *= FNV1_32A_PRIME; //-fallthrough
-    case 1:      hval ^= *bp++; hval *= FNV1_32A_PRIME;
-               } while (--n > 0);
-    }
-
-    return hval;
-}
-
-static inline int mystrtoi(char **p, int *res)
-{
-    char *start = *p;
-    double temp_res = ass_strtod(*p, p);
-    *res = (int) (temp_res + (temp_res > 0 ? 0.5 : -0.5));
-    return *p != start;
-}
-
-static inline int mystrtoll(char **p, long long *res)
-{
-    char *start = *p;
-    double temp_res = ass_strtod(*p, p);
-    *res = (long long) (temp_res + (temp_res > 0 ? 0.5 : -0.5));
-    return *p != start;
+    // '0u +' to avoid automatic integer promotion causing UB
+    return (0u + (uint32_t)i) << (shift & 31);
 }
 
 static inline int mystrtod(char **p, double *res)

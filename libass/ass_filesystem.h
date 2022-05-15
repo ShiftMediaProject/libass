@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 rcombs <rcombs@rcombs.me>
+ * Copyright (C) 2021 libass contributors
  *
  * This file is part of libass.
  *
@@ -16,13 +16,29 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#ifndef LIBASS_X86_CPUID_H
-#define LIBASS_X86_CPUID_H
+#include <stdio.h>
+#include <stdbool.h>
 
-#include <stdint.h>
+#ifndef LIBASS_FILESYSTEM_H
+#define LIBASS_FILESYSTEM_H
 
-uint32_t ass_has_cpuid( void );
-void ass_get_cpuid( uint32_t *eax, uint32_t *ebx, uint32_t *ecx, uint32_t *edx);
-void ass_get_xgetbv( uint32_t op, uint32_t *eax, uint32_t *edx );
+typedef enum {
+    FN_EXTERNAL,
+    FN_DIR_LIST,
+} FileNameSource;
 
-#endif
+FILE *ass_open_file(const char *filename, FileNameSource hint);
+
+typedef struct {
+    void *handle;
+    char *path;
+    size_t prefix, max_path;
+    const char *name;
+} ASS_Dir;
+
+bool ass_open_dir(ASS_Dir *dir, const char *path);
+const char *ass_read_dir(ASS_Dir *dir);
+const char *ass_current_file_path(ASS_Dir *dir);
+void ass_close_dir(ASS_Dir *dir);
+
+#endif /* LIBASS_FILESYSTEM_H */

@@ -77,7 +77,7 @@ static void write_png(char *fname, image_t *img)
 
     png_set_bgr(png_ptr);
 
-    row_pointers = (png_byte **) malloc(img->height * sizeof(png_byte *));
+    row_pointers = malloc(img->height * sizeof(png_byte *));
     for (k = 0; k < img->height; k++)
         row_pointers[k] = img->buffer + img->stride * k;
 
@@ -107,6 +107,7 @@ static void init(int frame_w, int frame_h)
         exit(1);
     }
 
+    ass_set_storage_size(ass_renderer, frame_w, frame_h);
     ass_set_frame_size(ass_renderer, frame_w, frame_h);
     ass_set_fonts(ass_renderer, NULL, "sans-serif",
                   ASS_FONTPROVIDER_AUTODETECT, NULL, 1);
@@ -118,7 +119,7 @@ static image_t *gen_image(int width, int height)
     img->width = width;
     img->height = height;
     img->stride = width * 3;
-    img->buffer = (unsigned char *) calloc(1, height * width * 3);
+    img->buffer = calloc(1, height * width * 3);
     memset(img->buffer, 63, img->stride * img->height);
     //for (int i = 0; i < height * width * 3; ++i)
     // img->buffer[i] = (i/3/50) % 100;
@@ -192,16 +193,26 @@ static void print_font_providers(ASS_Library *ass_library)
 
 int main(int argc, char *argv[])
 {
-    const int frame_w = 1280;
-    const int frame_h = 720;
+    int frame_w = 1280;
+    int frame_h = 720;
 
-    if (argc < 4) {
-        printf("usage: %s <image file> <subtitle file> <time>\n", argv[0]);
+    if (argc != 4 && argc != 6) {
+        printf("usage: %s <image file> <subtitle file> <time> "
+               "[<storage width> <storage height>]\n",
+                argv[0] ? argv[0] : "test");
         exit(1);
     }
     char *imgfile = argv[1];
     char *subfile = argv[2];
     double tm = strtod(argv[3], 0);
+    if (argc == 6) {
+        frame_w = atoi(argv[4]);
+        frame_h = atoi(argv[5]);
+        if (frame_w <= 0 || frame_h <= 0) {
+            printf("storage size must be non-zero and positive!\n");
+            exit(1);
+        }
+    }
 
     print_font_providers(ass_library);
 
