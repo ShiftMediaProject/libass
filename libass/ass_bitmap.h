@@ -97,22 +97,21 @@ typedef struct {
     uint8_t *buffer;      // h * stride buffer
 } Bitmap;
 
-bool alloc_bitmap(const BitmapEngine *engine, Bitmap *bm, int32_t w, int32_t h, bool zero);
-bool realloc_bitmap(const BitmapEngine *engine, Bitmap *bm, int32_t w, int32_t h);
-bool copy_bitmap(const BitmapEngine *engine, Bitmap *dst, const Bitmap *src);
+bool ass_alloc_bitmap(const BitmapEngine *engine, Bitmap *bm, int32_t w, int32_t h, bool zero);
+bool ass_realloc_bitmap(const BitmapEngine *engine, Bitmap *bm, int32_t w, int32_t h);
+bool ass_copy_bitmap(const BitmapEngine *engine, Bitmap *dst, const Bitmap *src);
 void ass_free_bitmap(Bitmap *bm);
 
-bool outline_to_bitmap(ASS_Renderer *render_priv, Bitmap *bm,
-                       ASS_Outline *outline1, ASS_Outline *outline2);
+struct render_context;
+
+bool ass_outline_to_bitmap(struct render_context *state, Bitmap *bm,
+                           ASS_Outline *outline1, ASS_Outline *outline2);
 
 void ass_synth_blur(const BitmapEngine *engine, Bitmap *bm,
-                    int be, double blur_r2);
+                    int be, double blur_r2x, double blur_r2y);
 
-int be_padding(int be);
-void be_blur_pre(uint8_t *buf, intptr_t stride, intptr_t width, intptr_t height);
-void be_blur_post(uint8_t *buf, intptr_t stride, intptr_t width, intptr_t height);
-bool ass_gaussian_blur(const BitmapEngine *engine, Bitmap *bm, double r2);
-void shift_bitmap(Bitmap *bm, int shift_x, int shift_y);
-void fix_outline(Bitmap *bm_g, Bitmap *bm_o);
+bool ass_gaussian_blur(const BitmapEngine *engine, Bitmap *bm, double r2x, double r2y);
+void ass_shift_bitmap(Bitmap *bm, int shift_x, int shift_y);
+void ass_fix_outline(Bitmap *bm_g, Bitmap *bm_o);
 
 #endif                          /* LIBASS_BITMAP_H */

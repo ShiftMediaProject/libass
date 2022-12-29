@@ -239,6 +239,133 @@ static long long string2timecode(ASS_Library *library, char *p)
     return tm;
 }
 
+static int read_digits(char **str, unsigned base, uint32_t *res)
+{
+    char *p = *str;
+    char *start = p;
+    uint32_t val = 0;
+
+    while (1) {
+        unsigned digit;
+        if (*p >= '0' && *p < FFMIN(base, 10) + '0')
+            digit = *p - '0';
+        else if (*p >= 'a' && *p < base - 10 + 'a')
+            digit = *p - 'a' + 10;
+        else if (*p >= 'A' && *p < base - 10 + 'A')
+            digit = *p - 'A' + 10;
+        else
+            break;
+        val = val * base + digit;
+        ++p;
+    }
+
+    *res = val;
+    *str = p;
+    return p != start;
+}
+
+/**
+ * \brief Convert a string to an integer reduced modulo 2**32
+ * Follows the rules for strtoul but reduces the number modulo 2**32
+ * instead of saturating it to 2**32 - 1.
+ */
+static int mystrtou32_modulo(char **p, unsigned base, uint32_t *res)
+{
+    // This emulates scanf with %d or %x format as it works on
+    // Windows, because that's what is used by VSFilter. In practice,
+    // scanf works the same way on other platforms too, but
+    // the standard leaves its behavior on overflow undefined.
+
+    // Unlike scanf and like strtoul, produce 0 for invalid inputs.
+
+    char *start = *p;
+    int sign = 1;
+
+    skip_spaces(p);
+
+    if (**p == '+')
+        ++*p;
+    else if (**p == '-')
+        sign = -1, ++*p;
+
+    if (base == 16 && !ass_strncasecmp(*p, "0x", 2))
+        *p += 2;
+
+    if (read_digits(p, base, res)) {
+        *res *= sign;
+        return 1;
+    } else {
+        *p = start;
+        return 0;
+    }
+}
+
+static int32_t parse_int_header(char *str)
+{
+    uint32_t val = 0;
+    unsigned base;
+
+    if (!ass_strncasecmp(str, "&h", 2) || !ass_strncasecmp(str, "0x", 2)) {
+        str += 2;
+        base = 16;
+    } else
+        base = 10;
+
+    mystrtou32_modulo(&str, base, &val);
+    return val;
+}
+
+static uint32_t parse_color_header(char *str)
+{
+    uint32_t color = parse_int_header(str);
+    return ass_bswap32(color);
+}
+
+// Return a boolean value for a string
+static char parse_bool(char *str)
+{
+    skip_spaces(&str);
+    return !ass_strncasecmp(str, "yes", 3) || strtol(str, NULL, 10) > 0;
+}
+
+static int parse_ycbcr_matrix(char *str)
+{
+    skip_spaces(&str);
+    if (*str == '\0')
+        return YCBCR_DEFAULT;
+
+    char *end = str + strlen(str);
+    rskip_spaces(&end, str);
+
+    // Trim a local copy of the input that we know is safe to
+    // modify. The buffer is larger than any valid string + NUL,
+    // so we can simply chop off the rest of the input.
+    char buffer[16];
+    size_t n = FFMIN(end - str, sizeof buffer - 1);
+    memcpy(buffer, str, n);
+    buffer[n] = '\0';
+
+    if (!ass_strcasecmp(buffer, "none"))
+        return YCBCR_NONE;
+    if (!ass_strcasecmp(buffer, "tv.601"))
+        return YCBCR_BT601_TV;
+    if (!ass_strcasecmp(buffer, "pc.601"))
+        return YCBCR_BT601_PC;
+    if (!ass_strcasecmp(buffer, "tv.709"))
+        return YCBCR_BT709_TV;
+    if (!ass_strcasecmp(buffer, "pc.709"))
+        return YCBCR_BT709_PC;
+    if (!ass_strcasecmp(buffer, "tv.240m"))
+        return YCBCR_SMPTE240M_TV;
+    if (!ass_strcasecmp(buffer, "pc.240m"))
+        return YCBCR_SMPTE240M_PC;
+    if (!ass_strcasecmp(buffer, "tv.fcc"))
+        return YCBCR_FCC_TV;
+    if (!ass_strcasecmp(buffer, "pc.fcc"))
+        return YCBCR_FCC_PC;
+    return YCBCR_UNKNOWN;
+}
+
 #define NEXT(str,token) \
     token = next_token(&str); \
     if (!token) break;
@@ -282,7 +409,7 @@ static long long string2timecode(ASS_Library *library, char *p)
         }
 
 #define COLORVAL(name) ANYVAL(name,parse_color_header)
-#define INTVAL(name) ANYVAL(name,atoi)
+#define INTVAL(name) ANYVAL(name,parse_int_header)
 #define FPVAL(name) ANYVAL(name,ass_atof)
 #define TIMEVAL(name) \
     } else if (ass_strcasecmp(tname, #name) == 0) { \
@@ -290,7 +417,7 @@ static long long string2timecode(ASS_Library *library, char *p)
 
 #define STYLEVAL(name) \
     } else if (ass_strcasecmp(tname, #name) == 0) { \
-        target->name = lookup_style(track, token);
+        target->name = ass_lookup_style(track, token);
 
 // skip spaces in str beforehand, or trim leading spaces afterwards
 static inline void advance_token_pos(const char **const str,
@@ -349,12 +476,12 @@ static int process_event_tail(ASS_Track *track, ASS_Event *event,
     while (1) {
         NEXT(q, tname);
         if (ass_strcasecmp(tname, "Text") == 0) {
-            char *last;
             event->Text = strdup(p);
             if (event->Text && *event->Text != 0) {
-                last = event->Text + strlen(event->Text) - 1;
-                if (last >= event->Text && *last == '\r')
-                    *last = 0;
+                char *end = event->Text + strlen(event->Text);
+                while (end > event->Text &&
+                       (end[-1] == '\r' || end[-1] == '\t' || end[-1] == ' '))
+                    *--end = 0;
             }
             event->Duration -= event->Start;
             free(format);
@@ -380,6 +507,16 @@ static int process_event_tail(ASS_Track *track, ASS_Event *event,
     return 1;
 }
 
+static void set_style_alpha(ASS_Style *style, int32_t front_alpha, int32_t back_alpha)
+{
+        front_alpha  = FFMAX(FFMIN(front_alpha, 0xFF), 0);
+        back_alpha = FFMAX(FFMIN(back_alpha, 0xFF), 0);
+        style->PrimaryColour   = (style->PrimaryColour   & 0xFFFFFF00) | front_alpha;
+        style->SecondaryColour = (style->SecondaryColour & 0xFFFFFF00) | front_alpha;
+        style->OutlineColour   = (style->OutlineColour   & 0xFFFFFF00) | front_alpha;
+        style->BackColour      = (style->BackColour      & 0xFFFFFF00) | back_alpha;
+}
+
 /**
  * \brief Parse command line style overrides (--ass-force-style option)
  * \param track track to apply overrides to
@@ -403,13 +540,17 @@ void ass_process_force_style(ASS_Track *track)
         token = eq + 1;
 
         if (!ass_strcasecmp(*fs, "PlayResX"))
-            track->PlayResX = atoi(token);
+            track->PlayResX = parse_int_header(token);
         else if (!ass_strcasecmp(*fs, "PlayResY"))
-            track->PlayResY = atoi(token);
+            track->PlayResY = parse_int_header(token);
+        else if (!ass_strcasecmp(*fs, "LayoutResX"))
+            track->LayoutResX = parse_int_header(token);
+        else if (!ass_strcasecmp(*fs, "LayoutResY"))
+            track->LayoutResY = parse_int_header(token);
         else if (!ass_strcasecmp(*fs, "Timer"))
             track->Timer = ass_atof(token);
         else if (!ass_strcasecmp(*fs, "WrapStyle"))
-            track->WrapStyle = atoi(token);
+            track->WrapStyle = parse_int_header(token);
         else if (!ass_strcasecmp(*fs, "ScaledBorderAndShadow"))
             track->ScaledBorderAndShadow = parse_bool(token);
         else if (!ass_strcasecmp(*fs, "Kerning"))
@@ -436,6 +577,9 @@ void ass_process_force_style(ASS_Track *track)
                     COLORVAL(SecondaryColour)
                     COLORVAL(OutlineColour)
                     COLORVAL(BackColour)
+                    } else if (ass_strcasecmp(tname, "AlphaLevel") == 0) {
+                        int32_t alpha = parse_int_header(token);
+                        set_style_alpha(target, alpha, alpha);
                     FPVAL(FontSize)
                     INTVAL(Bold)
                     INTVAL(Italic)
@@ -512,6 +656,8 @@ static int process_style(ASS_Track *track, char *str)
     style->ScaleX = 100.;
     style->ScaleY = 100.;
 
+    int32_t ssa_alpha = 0;
+
     while (1) {
         NEXT(q, tname);
         NEXT(p, token);
@@ -523,10 +669,12 @@ static int process_style(ASS_Track *track, char *str)
             COLORVAL(SecondaryColour)
             COLORVAL(OutlineColour) // TertiaryColor
             COLORVAL(BackColour)
-            // SSA uses BackColour for both outline and shadow
-            // this will destroy SSA's TertiaryColour, but i'm not going to use it anyway
-            if (track->track_type == TRACK_TYPE_SSA)
-                target->OutlineColour = target->BackColour;
+                // SSA uses BackColour for both outline and shadow
+                // this will destroy SSA's TertiaryColour, but i'm not going to use it anyway
+                if (track->track_type == TRACK_TYPE_SSA)
+                    target->OutlineColour = target->BackColour;
+            } else if (ass_strcasecmp(tname, "AlphaLevel") == 0) {
+                ssa_alpha = parse_int_header(token);
             FPVAL(FontSize)
             INTVAL(Bold)
             INTVAL(Italic)
@@ -536,13 +684,13 @@ static int process_style(ASS_Track *track, char *str)
             FPVAL(Angle)
             INTVAL(BorderStyle)
             INTVAL(Alignment)
-            if (track->track_type == TRACK_TYPE_ASS)
-                target->Alignment = numpad2align(target->Alignment);
-            // VSFilter compatibility
-            else if (target->Alignment == 8)
-                target->Alignment = 3;
-            else if (target->Alignment == 4)
-                target->Alignment = 11;
+                if (track->track_type == TRACK_TYPE_ASS)
+                    target->Alignment = numpad2align(target->Alignment);
+                // VSFilter compatibility
+                else if (target->Alignment == 8)
+                    target->Alignment = 3;
+                else if (target->Alignment == 4)
+                    target->Alignment = 11;
             INTVAL(MarginL)
             INTVAL(MarginR)
             INTVAL(MarginV)
@@ -554,6 +702,9 @@ static int process_style(ASS_Track *track, char *str)
         PARSE_END
     }
     free(format);
+    // VSF compat: always set BackColour Alpha to 0x80 in SSA
+    if (track->track_type == TRACK_TYPE_SSA)
+        set_style_alpha(style, ssa_alpha, 0x80);
     style->ScaleX = FFMAX(style->ScaleX, 0.) / 100.;
     style->ScaleY = FFMAX(style->ScaleY, 0.) / 100.;
     style->Spacing = FFMAX(style->Spacing, 0.);
@@ -661,6 +812,26 @@ static int process_styles_line(ASS_Track *track, char *str)
     return ret;
 }
 
+static inline void parse_script_type(ASS_Track *track, const char *str)
+{
+    // VSF compat: don't check for leading 'v' and
+    // parse value from the last non-space backwards
+    const char *p = str + strlen(str);
+    rskip_spaces((char **) &p, (char *) str);
+    size_t len = p - str;
+    if (len < 4) // rskip_spaces stops _at_ last space
+        return;
+
+    int ver = TRACK_TYPE_SSA;
+    if (*(p-1) == '+') {
+        ver = TRACK_TYPE_ASS;
+        --len; --p;
+    }
+
+    if (len >= 4 && !strncmp(p-4, "4.00", 4))
+        track->track_type = ver;
+}
+
 static inline void check_duplicate_info_line(const ASS_Track *const track,
                                              const ScriptInfo si,
                                              const char *const name)
@@ -677,16 +848,22 @@ static int process_info_line(ASS_Track *track, char *str)
 {
     if (!strncmp(str, "PlayResX:", 9)) {
         check_duplicate_info_line(track, SINFO_PLAYRESX, "PlayResX");
-        track->PlayResX = atoi(str + 9);
+        track->PlayResX = parse_int_header(str + 9);
     } else if (!strncmp(str, "PlayResY:", 9)) {
         check_duplicate_info_line(track, SINFO_PLAYRESY, "PlayResY");
-        track->PlayResY = atoi(str + 9);
+        track->PlayResY = parse_int_header(str + 9);
+    } else if (!strncmp(str, "LayoutResX:", 11)) {
+        check_duplicate_info_line(track, SINFO_LAYOUTRESX, "LayoutResX");
+        track->LayoutResX = parse_int_header(str + 11);
+    } else if (!strncmp(str, "LayoutResY:", 11)) {
+        check_duplicate_info_line(track, SINFO_LAYOUTRESY, "LayoutResY");
+        track->LayoutResY = parse_int_header(str + 11);
     } else if (!strncmp(str, "Timer:", 6)) {
         check_duplicate_info_line(track, SINFO_TIMER, "Timer");
         track->Timer = ass_atof(str + 6);
     } else if (!strncmp(str, "WrapStyle:", 10)) {
         check_duplicate_info_line(track, SINFO_WRAPSTYLE, "WrapStyle");
-        track->WrapStyle = atoi(str + 10);
+        track->WrapStyle = parse_int_header(str + 10);
     } else if (!strncmp(str, "ScaledBorderAndShadow:", 22)) {
         check_duplicate_info_line(track, SINFO_SCALEDBORDER,
                                     "ScaledBorderAndShadow");
@@ -703,6 +880,9 @@ static int process_info_line(ASS_Track *track, char *str)
         while (*p && ass_isspace(*p)) p++;
         free(track->Language);
         track->Language = strndup(p, 2);
+    } else if (!strncmp(str, "ScriptType:", 11)) {
+        check_duplicate_info_line(track, SINFO_SCRIPTTYPE, "ScriptType");
+        parse_script_type(track, str + 11);
     } else if (!strncmp(str, "; Script generated by ", 22)) {
         if (!strncmp(str + 22,"FFmpeg/Lavc", 11))
             track->parser_priv->header_flags |= GENBY_FFMPEG;
@@ -763,9 +943,8 @@ static bool detect_legacy_conv_subs(ASS_Track *track)
      */
 
     // GENBY_FFMPEG and exact ffmpeg headers required
-    // Note: If there's SINFO_SCRIPTTYPE in the future this needs to be updated
     if (track->parser_priv->header_flags
-            ^ (SINFO_PLAYRESX | SINFO_PLAYRESY | GENBY_FFMPEG))
+            != (SINFO_SCRIPTTYPE | SINFO_PLAYRESX | SINFO_PLAYRESY | GENBY_FFMPEG))
         return false;
 
     // Legacy ffmpeg only ever has one style
@@ -822,7 +1001,13 @@ static int process_events_line(ASS_Track *track, char *str)
             return -1;
         event = track->events + eid;
 
-        return process_event_tail(track, event, str, 0);
+        int ret = process_event_tail(track, event, str, 0);
+        if (!ret)
+            return 0;
+        // If something went wrong, discard the useless Event
+        ass_free_event(track, eid);
+        track->n_events--;
+        return ret;
     } else {
         ass_msg(track->library, MSGL_V, "Not understood: '%.30s'", str);
     }
@@ -1123,9 +1308,10 @@ void ass_process_chunk(ASS_Track *track, char *data, int size,
             break;
 
         NEXT(p, token);
-        event->Layer = atoi(token);
+        event->Layer = parse_int_header(token);
 
-        process_event_tail(track, event, p, 3);
+        if (process_event_tail(track, event, p, 3))
+            break;
 
         event->Start = timecode;
         event->Duration = duration;
@@ -1244,7 +1430,7 @@ out:
  * \param bufsize out: file size
  * \return pointer to file contents. Caller is responsible for its deallocation.
  */
-char *read_file(ASS_Library *library, const char *fname, FileNameSource hint, size_t *bufsize)
+char *ass_load_file(ASS_Library *library, const char *fname, FileNameSource hint, size_t *bufsize)
 {
     int res;
     long sz;
@@ -1376,7 +1562,7 @@ static char *read_file_recode(ASS_Library *library, char *fname,
     char *buf;
     size_t bufsize;
 
-    buf = read_file(library, fname, FN_EXTERNAL, &bufsize);
+    buf = ass_load_file(library, fname, FN_EXTERNAL, &bufsize);
     if (!buf)
         return 0;
 #ifdef CONFIG_ICONV
@@ -1432,7 +1618,7 @@ int ass_read_styles(ASS_Track *track, char *fname, char *codepage)
     ParserState old_state;
     size_t sz;
 
-    buf = read_file(track->library, fname, FN_EXTERNAL, &sz);
+    buf = ass_load_file(track->library, fname, FN_EXTERNAL, &sz);
     if (!buf)
         return 1;
 #ifdef CONFIG_ICONV
@@ -1545,6 +1731,9 @@ int ass_track_set_feature(ASS_Track *track, ASS_Feature feature, int enable)
     static const uint32_t supported =
 #ifdef USE_FRIBIDI_EX_API
         FEATURE_MASK(ASS_FEATURE_BIDI_BRACKETS) |
+#endif
+#ifdef CONFIG_UNIBREAK
+        FEATURE_MASK(ASS_FEATURE_WRAP_UNICODE) |
 #endif
         FEATURE_MASK(ASS_FEATURE_WHOLE_TEXT_LAYOUT) |
         0;

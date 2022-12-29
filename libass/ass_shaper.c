@@ -50,7 +50,7 @@ struct ass_shaper {
 
     // FriBidi log2vis
     int n_glyphs, n_pars;
-    FriBidiChar *event_text;
+    FriBidiChar *event_text; // just a reference, owned by text_info
     FriBidiCharType *ctypes;
     FriBidiLevel *emblevels;
     FriBidiStrIndex *cmap;
@@ -103,8 +103,7 @@ void ass_shaper_info(ASS_Library *lib)
 static bool check_allocations(ASS_Shaper *shaper, size_t new_size, size_t n_pars)
 {
     if (new_size > shaper->n_glyphs) {
-        if (!ASS_REALLOC_ARRAY(shaper->event_text, new_size) ||
-            !ASS_REALLOC_ARRAY(shaper->ctypes, new_size) ||
+        if (!ASS_REALLOC_ARRAY(shaper->ctypes, new_size) ||
 #ifdef USE_FRIBIDI_EX_API
             (shaper->bidi_brackets && !ASS_REALLOC_ARRAY(shaper->btypes, new_size)) ||
 #endif
@@ -126,9 +125,7 @@ static bool check_allocations(ASS_Shaper *shaper, size_t new_size, size_t n_pars
  */
 void ass_shaper_free(ASS_Shaper *shaper)
 {
-    ass_cache_done(shaper->metrics_cache);
     free(shaper->features);
-    free(shaper->event_text);
     free(shaper->ctypes);
 #ifdef USE_FRIBIDI_EX_API
     free(shaper->btypes);
@@ -137,11 +134,6 @@ void ass_shaper_free(ASS_Shaper *shaper)
     free(shaper->cmap);
     free(shaper->pbase_dir);
     free(shaper);
-}
-
-void ass_shaper_empty_cache(ASS_Shaper *shaper)
-{
-    ass_cache_empty(shaper->metrics_cache);
 }
 
 void ass_shaper_font_data_free(ASS_ShaperFontData *priv)
@@ -223,7 +215,7 @@ static void update_hb_size(hb_font_t *hb_font, FT_Face face)
  *
  */
 
-FT_Glyph_Metrics *
+static FT_Glyph_Metrics *
 get_cached_metrics(struct ass_shaper_metrics_data *metrics,
                    hb_codepoint_t unicode, hb_codepoint_t glyph)
 {
@@ -974,6 +966,7 @@ bool ass_shaper_shape(ASS_Shaper *shaper, TextInfo *text_info)
     int i, ret, last_break;
     FriBidiParType dir, *pdir;
     GlyphInfo *glyphs = text_info->glyphs;
+    shaper->event_text = text_info->event_text;
 
     int n_pars = 1;
     for (i = 0; i < text_info->length - 1; i++)
@@ -1037,8 +1030,10 @@ bool ass_shaper_shape(ASS_Shaper *shaper, TextInfo *text_info)
 /**
  * \brief Create a new shaper instance
  */
-ASS_Shaper *ass_shaper_new(void)
+ASS_Shaper *ass_shaper_new(Cache *metrics_cache)
 {
+    assert(metrics_cache);
+
     ASS_Shaper *shaper = calloc(sizeof(*shaper), 1);
     if (!shaper)
         return NULL;
@@ -1047,9 +1042,7 @@ ASS_Shaper *ass_shaper_new(void)
 
     if (!init_features(shaper))
         goto error;
-    shaper->metrics_cache = ass_glyph_metrics_cache_create();
-    if (!shaper->metrics_cache)
-        goto error;
+    shaper->metrics_cache = metrics_cache;
 
     return shaper;
 
@@ -1129,7 +1122,7 @@ FriBidiStrIndex *ass_shaper_get_reorder_map(ASS_Shaper *shaper)
  * can be used for autodetection.
  * \param enc Windows font encoding
  */
-FriBidiParType resolve_base_direction(int enc)
+FriBidiParType ass_resolve_base_direction(int enc)
 {
     switch (enc) {
         case -1:

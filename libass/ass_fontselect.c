@@ -182,7 +182,7 @@ static void load_fonts_from_dir(ASS_Library *library, const char *dir)
             continue;
         ass_msg(library, MSGL_INFO, "Loading font file '%s'", path);
         size_t size = 0;
-        void *data = read_file(library, path, FN_DIR_LIST, &size);
+        void *data = ass_load_file(library, path, FN_DIR_LIST, &size);
         if (data) {
             ass_add_font(library, name, data, size);
             free(data);
@@ -891,7 +891,7 @@ static char *select_font(ASS_FontSelector *priv,
  * \return font file path
 */
 char *ass_font_select(ASS_FontSelector *priv,
-                      ASS_Font *font, int *index, char **postscript_name,
+                      const ASS_Font *font, int *index, char **postscript_name,
                       int *uid, ASS_FontStream *data, uint32_t code)
 {
     char *res = 0;
@@ -984,7 +984,7 @@ static void process_fontdata(ASS_FontProvider *priv, int idx)
 
         num_faces = face->num_faces;
 
-        charmap_magic(library, face);
+        ass_charmap_magic(library, face);
 
         memset(&info, 0, sizeof(ASS_FontProviderMetaData));
         if (!get_font_info(selector->ftlibrary, face, NULL, &info)) {
@@ -1092,10 +1092,16 @@ ass_fontselect_init(ASS_Library *library, FT_Library ftlibrary, size_t *num_emfo
     priv->path_default = path ? strdup(path) : NULL;
     priv->index_default = 0;
 
+    if (family && !priv->family_default)
+        goto fail;
+    if (path && !priv->path_default)
+        goto fail;
+
     priv->embedded_provider = ass_embedded_fonts_add_provider(priv, num_emfonts);
 
     if (priv->embedded_provider == NULL) {
         ass_msg(library, MSGL_WARN, "failed to create embedded font provider");
+        goto fail;
     }
 
     if (dfp >= ASS_FONTPROVIDER_AUTODETECT) {
@@ -1118,6 +1124,19 @@ ass_fontselect_init(ASS_Library *library, FT_Library ftlibrary, size_t *num_emfo
     }
 
     return priv;
+
+fail:
+    if (priv->default_provider)
+        ass_font_provider_free(priv->default_provider);
+    if (priv->embedded_provider)
+        ass_font_provider_free(priv->embedded_provider);
+
+    free(priv->family_default);
+    free(priv->path_default);
+
+    free(priv);
+
+    return NULL;
 }
 
 void ass_get_available_font_providers(ASS_Library *priv,

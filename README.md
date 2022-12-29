@@ -8,7 +8,7 @@ libass is a portable subtitle renderer for the ASS/SSA (Advanced Substation Alph
 
 Get it
 ======
-See [GitHub releases](https://github.com/libass/libass/releases) for the latest release 0.16.0 (released 2022-05-12).
+See [GitHub releases](https://github.com/libass/libass/releases) for the latest release 0.17.0 (released 2022-11-30).
 See the [changelog](https://github.com/libass/libass/blob/master/Changelog) for a detailed list of changes.
 
 Source code is available from our [GitHub repository](https://github.com/libass/libass).
@@ -43,7 +43,7 @@ The following projects/companies use libass:
 
 Information about the ASS format:
 =================================
-- [ASS specification (incomplete)](http://moodub.free.fr/video/ass-specs.doc)
+- [ASS format overview (incomplete and partially incorrect)](http://moodub.free.fr/video/ass-specs.doc)
 - [ASS override tags (Aegisub manual)](http://docs.aegisub.org/latest/ASS_Tags/)
 - [VSFilter source code (Guliverkli2)](http://sourceforge.net/p/guliverkli2/code/HEAD/tree/src/subtitles/)
 
@@ -60,6 +60,6 @@ Other ASS/SSA implementations:
   - VSFilter in [guliverkli](http://sourceforge.net/projects/guliverkli/) (defunct, forked as Guliverkli2)
 - [ffdshow](http://ffdshow-tryout.sourceforge.net/) (defunct)
 - [Perian](https://github.com/MaddTheSane/perian) (defunct)
-- [asa](http://git.spaceboyz.net/asa.git) (defunct)
+- [asa](https://web.archive.org/web/20110906033709/http://asa.diac24.net/) (defunct)
 - [libjass](https://github.com/Arnavion/libjass) (defunct)
 - [ASS.js](https://github.com/weizhenye/ASS)

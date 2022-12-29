@@ -1,8 +1,6 @@
-AC_INIT(libass, 0.16.0)
-AM_INIT_AUTOMAKE([foreign])
+AC_INIT(libass, 0.17.0)
+AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_CONFIG_MACRO_DIR([m4])
-# Disable Fortran checks
-define([AC_LIBTOOL_LANG_F77_CONFIG], [:])
 LT_INIT
 AC_CONFIG_SRCDIR([libass/ass.c])
 AC_CONFIG_HEADERS([config.h])
@@ -24,18 +22,30 @@ AC_ARG_ENABLE([compare], AS_HELP_STRING([--enable-compare],
     [enable compare program (requires libpng) @<:@default=no@:>@]))
 AC_ARG_ENABLE([profile], AS_HELP_STRING([--enable-profile],
     [enable profiling program @<:@default=no@:>@]))
+AC_ARG_ENABLE([fuzz], AS_HELP_STRING([--enable-fuzz],
+    [enable fuzzing consumer @<:@default=no@:>@]))
 AC_ARG_ENABLE([fontconfig], AS_HELP_STRING([--disable-fontconfig],
     [disable fontconfig support @<:@default=check@:>@]))
 AC_ARG_ENABLE([directwrite], AS_HELP_STRING([--disable-directwrite],
     [disable DirectWrite support (Windows only) @<:@default=check@:>@]))
 AC_ARG_ENABLE([coretext], AS_HELP_STRING([--disable-coretext],
     [disable CoreText support (OSX only) @<:@default=check@:>@]))
+AC_ARG_ENABLE([libunibreak], AS_HELP_STRING([--disable-libunibreak],
+    [disable libunibreak support @<:@default=check@:>@]))
 AC_ARG_ENABLE([require-system-font-provider], AS_HELP_STRING([--disable-require-system-font-provider],
     [allow compilation even if no system font provider was found @<:@default=enabled:>@]))
 AC_ARG_ENABLE([asm], AS_HELP_STRING([--disable-asm],
     [disable compiling with ASM @<:@default=check@:>@]))
 AC_ARG_ENABLE([large-tiles], AS_HELP_STRING([--enable-large-tiles],
     [use larger tiles in the rasterizer (better performance, slightly worse quality) @<:@default=disabled@:>@]))
+
+AC_ARG_VAR([ART_SAMPLES],
+    [Path to the root of libass' regression testing sample repository. If set, it is used in make check.])
+AC_ARG_VAR([FUZZ_LDFLAGS],
+    [Optional special linking flags only used for the fuzzer binary.])
+AC_ARG_VAR([FUZZ_CPPFLAGS],
+    [If fuzzing program is enabled, set this to select alternative modes; see fuzzer source for options.])
+FUZZ_CPPFLAGS="${FUZZ_CPPFLAGS:--DASS_FUZZMODE=0}"
 
 # Checks for available libraries and define corresponding C Macros
 # Start with system libs, then check everything else via pkg-config
@@ -93,6 +103,19 @@ AS_IF([test "x$enable_test" = xyes || test "x$enable_compare" = xyes], [
         CFLAGS="$CFLAGS $LIBPNG_CFLAGS"
         AC_DEFINE(CONFIG_LIBPNG, 1, [found libpng via pkg-config])
         libpng=true
+    ])
+])
+
+AS_IF([test "x$enable_libunibreak" != xno], [
+    PKG_CHECK_MODULES([LIBUNIBREAK], [libunibreak >= 1.1], [
+        pkg_requires="libunibreak >= 1.1, ${pkg_requires}"
+        CFLAGS="$CFLAGS $LIBUNIBREAK_CFLAGS"
+        LIBS="$LIBS $LIBUNIBREAK_LIBS"
+        AC_DEFINE(CONFIG_UNIBREAK, 1, [found libunibreak via pkg-config])
+    ], [
+        AS_IF([test "x$enable_libunibreak" = xyes], [
+            AC_MSG_ERROR([libunibreak support was requested, but it was not found.])
+        ])
     ])
 ])
 
@@ -325,6 +348,7 @@ AM_CONDITIONAL([ENABLE_LARGE_TILES], [test "x$enable_large_tiles" = xyes])
 AM_CONDITIONAL([ENABLE_COMPARE], [test "x$enable_compare" = xyes && test "x$libpng" = xtrue])
 AM_CONDITIONAL([ENABLE_TEST], [test "x$enable_test" = xyes && test "x$libpng" = xtrue])
 AM_CONDITIONAL([ENABLE_PROFILE], [test "x$enable_profile" = xyes])
+AM_CONDITIONAL([ENABLE_FUZZ], [test "x$enable_fuzz" = xyes])
 
 AM_CONDITIONAL([FONTCONFIG], [test "x$fontconfig" = xtrue])
 AM_CONDITIONAL([CORETEXT], [test "x$coretext" = xtrue])
@@ -367,5 +391,5 @@ AC_DEFINE_UNQUOTED([CONFIG_SOURCEVERSION], ["$srcversion_string"],
 ## Setup output beautifier.
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
-AC_CONFIG_FILES([Makefile libass/Makefile test/Makefile compare/Makefile profile/Makefile libass.pc])
+AC_CONFIG_FILES([Makefile libass.pc])
 AC_OUTPUT

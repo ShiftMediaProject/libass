@@ -24,7 +24,7 @@
 #include <stdarg.h>
 #include "ass_types.h"
 
-#define LIBASS_VERSION 0x01600000
+#define LIBASS_VERSION 0x01700000
 
 #ifdef __cplusplus
 extern "C" {
@@ -266,6 +266,19 @@ typedef enum {
      */
     ASS_FEATURE_WHOLE_TEXT_LAYOUT,
 
+    /**
+     * Break lines according to the Unicode Line Breaking Algorithm.
+     * If the track language is set, some additional language-specific tweaks
+     * may be applied. Setting this enables more breaking opportunities
+     * compared to classic ASS. However, it is still possible for long words
+     * without breaking opportunities to cause overfull lines.
+     * This is incompatible with VSFilter and disabled by default.
+     *
+     * This feature may be unavailable at runtime if
+     * libass was compiled without libunibreak support.
+     */
+    ASS_FEATURE_WRAP_UNICODE,
+
     // New enum values can be added here in new ABI-compatible library releases.
 } ASS_Feature;
 
@@ -363,7 +376,7 @@ void ass_renderer_done(ASS_Renderer *priv);
  * The value set with this function can influence the pixel aspect ratio used
  * for rendering.
  * If after compensating for configured margins the frame size
- * is not an isotropicly scaled version of the video display size,
+ * is not an isotropically scaled version of the video display size,
  * you may have to use ass_set_pixel_aspect().
  * @see ass_set_pixel_aspect()
  * @see ass_set_margins()
@@ -379,6 +392,7 @@ void ass_set_frame_size(ASS_Renderer *priv, int w, int h);
  * \brief Set the source image size in pixels.
  * This affects some ASS tags like e.g. 3D transforms and
  * is used to calculate the source aspect ratio and blur scale.
+ * If subtitles specify valid LayoutRes* headers, those will take precedence.
  * The source image size can be reset to default by setting w and h to 0.
  * The value set with this function can influence the pixel aspect ratio used
  * for rendering.
@@ -446,8 +460,13 @@ void ass_set_use_margins(ASS_Renderer *priv, int use);
  * by calling this function, libass will calculate a default pixel aspect ratio
  * out of values set with ass_set_frame_size() and ass_set_storage_size(). Note
  * that this default assumes the frame size after compensating for margins
- * corresponds to an isotropicly scaled version of the video display size.
+ * corresponds to an isotropically scaled version of the video display size.
  * If the storage size has not been set, a pixel aspect ratio of 1 is assumed.
+ *
+ * If subtitles specify valid LayoutRes* headers, the API-configured
+ * pixel aspect value is discarded in favour of one calculated out of the
+ * headers and values set with ass_set_frame_size().
+ *
  * \param priv renderer handle
  * \param par pixel aspect ratio (1.0 means square pixels, 0 means default)
  */
