@@ -228,9 +228,9 @@ static void set_default_style(ASS_Style *style)
 
 static long long string2timecode(ASS_Library *library, char *p)
 {
-    int h, m, s, ms;
+    int32_t h, m, s, ms;
     long long tm;
-    int res = sscanf(p, "%d:%d:%d.%d", &h, &m, &s, &ms);
+    int res = sscanf(p, "%" SCNd32 ":%" SCNd32 ":%" SCNd32 ".%" SCNd32, &h, &m, &s, &ms);
     if (res < 4) {
         ass_msg(library, MSGL_WARN, "Bad timestamp");
         return 0;
@@ -366,9 +366,11 @@ static int parse_ycbcr_matrix(char *str)
     return YCBCR_UNKNOWN;
 }
 
-#define NEXT(str,token) \
-    token = next_token(&str); \
+#define NEXT(str,token,rtrim) \
+    token = next_token(&str, rtrim); \
     if (!token) break;
+#define NEXTNAME(str,token) NEXT(str, token, true)
+#define NEXTVAL(str,token) NEXT(str, token, false)
 
 
 #define ALIAS(alias,name) \
@@ -428,10 +430,9 @@ static inline void advance_token_pos(const char **const str,
     *end   = *start;
     while (**end != '\0' && **end != ',') ++*end;
     *str = *end + (**end == ',');
-    rskip_spaces((char**)end, (char*)*start);
 }
 
-static char *next_token(char **str)
+static char *next_token(char **str, bool rtrim)
 {
     char *p;
     char *start;
@@ -444,6 +445,8 @@ static char *next_token(char **str)
                       (const char**)&start,
                       (const char**)&p);
 
+    if (rtrim)
+        rskip_spaces(&p, start);
     *p = '\0';
     return start;
 }
@@ -470,11 +473,11 @@ static int process_event_tail(ASS_Track *track, ASS_Event *event,
     char *q = format;           // format scanning pointer
 
     for (i = 0; i < n_ignored; ++i) {
-        NEXT(q, tname);
+        NEXTVAL(q, tname);
     }
 
     while (1) {
-        NEXT(q, tname);
+        NEXTNAME(q, tname);
         if (ass_strcasecmp(tname, "Text") == 0) {
             event->Text = strdup(p);
             if (event->Text && *event->Text != 0) {
@@ -487,7 +490,7 @@ static int process_event_tail(ASS_Track *track, ASS_Event *event,
             free(format);
             return event->Text ? 0 : -1;           // "Text" is always the last
         }
-        NEXT(p, token);
+        NEXTVAL(p, token);
 
         ALIAS(End, Duration)    // temporarily store end timecode in event->Duration
         ALIAS(Actor, Name)      // both variants are used in files
@@ -616,7 +619,6 @@ void ass_process_force_style(ASS_Track *track)
 */
 static int process_style(ASS_Track *track, char *str)
 {
-
     char *token;
     char *tname;
     char *p = str;
@@ -659,11 +661,13 @@ static int process_style(ASS_Track *track, char *str)
     int32_t ssa_alpha = 0;
 
     while (1) {
-        NEXT(q, tname);
-        NEXT(p, token);
+        NEXTNAME(q, tname);
+        NEXTVAL(p, token);
 
         PARSE_START
             STARREDSTRVAL(Name)
+                if (!target->Name)
+                    goto fail;
             STRVAL(FontName)
             COLORVAL(PrimaryColour)
             COLORVAL(SecondaryColour)
@@ -701,7 +705,10 @@ static int process_style(ASS_Track *track, char *str)
             FPVAL(Shadow)
         PARSE_END
     }
+
     free(format);
+    format = NULL;
+
     // VSF compat: always set BackColour Alpha to 0x80 in SSA
     if (track->track_type == TRACK_TYPE_SSA)
         set_style_alpha(style, ssa_alpha, 0x80);
@@ -714,19 +721,23 @@ static int process_style(ASS_Track *track, char *str)
     style->Italic = !!style->Italic;
     style->Underline = !!style->Underline;
     style->StrikeOut = !!style->StrikeOut;
-    if (!style->Name)
+    if (!style->Name || !*style->Name) {
+        free(style->Name);
         style->Name = strdup("Default");
+    }
     if (!style->FontName)
         style->FontName = strdup("Arial");
-    if (!style->Name || !style->FontName) {
-        ass_free_style(track, sid);
-        track->n_styles--;
-        return -1;
-    }
+    if (!style->Name || !style->FontName)
+        goto fail;
     if (strcmp(target->Name, "Default") == 0)
         track->default_style = sid;
     return 0;
 
+fail:
+    free(format);
+    ass_free_style(track, sid);
+    track->n_styles--;
+    return -1;
 }
 
 static bool format_line_compare(const char *fmt1, const char *fmt2)
@@ -750,6 +761,8 @@ static bool format_line_compare(const char *fmt1, const char *fmt2)
 
         advance_token_pos(&fmt1, &tk1_start, &tk1_end);
         advance_token_pos(&fmt2, &tk2_start, &tk2_end);
+        rskip_spaces((char**)&tk1_end, (char*)tk1_start);
+        rskip_spaces((char**)&tk2_end, (char*)tk2_start);
 
         TOKEN_ALIAS(Name, Actor)
         if ((tk1_end-tk1_start) != (tk2_end-tk2_start))
@@ -1008,6 +1021,8 @@ static int process_events_line(ASS_Track *track, char *str)
         ass_free_event(track, eid);
         track->n_events--;
         return ret;
+    } else if (!strncmp(str, "Comment:", 8)) {
+        // Ignore Comments
     } else {
         ass_msg(track->library, MSGL_V, "Not understood: '%.30s'", str);
     }
@@ -1302,12 +1317,12 @@ void ass_process_chunk(ASS_Track *track, char *data, int size,
     p = str;
 
     do {
-        NEXT(p, token);
+        NEXTVAL(p, token);
         event->ReadOrder = atoi(token);
         if (check_readorder && check_duplicate_event(track, event->ReadOrder))
             break;
 
-        NEXT(p, token);
+        NEXTVAL(p, token);
         event->Layer = parse_int_header(token);
 
         if (process_event_tail(track, event, p, 3))

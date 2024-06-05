@@ -8,7 +8,7 @@ libass is a portable subtitle renderer for the ASS/SSA (Advanced Substation Alph
 
 Get it
 ======
-See [GitHub releases](https://github.com/libass/libass/releases) for the latest release 0.17.1 (released 2023-02-26).
+See [GitHub releases](https://github.com/libass/libass/releases) for the latest release 0.17.2 (released 2024-05-19).
 See the [changelog](https://github.com/libass/libass/blob/master/Changelog) for a detailed list of changes.
 
 Source code is available from our [GitHub repository](https://github.com/libass/libass).
@@ -18,6 +18,21 @@ Contact
 Please use the [issue tracker](https://github.com/libass/libass/issues?state=open) to report bugs or feature requests.
 
 We have an IRC channel, too. Talk to us on [irc.libera.chat/#libass](https://web.libera.chat/#libass). Note that we cannot be online all the time and we cannot answer IRC questions if you leave the channel. Even if you do not get an immediate response, keep your IRC client open, and we will eventually get back to you.
+
+Building
+========
+
+libass offers two build systems to choose from: Autotools and Meson.
+
+Autotools is preferred for development since it integrates with our testing
+infrastructure and is feature-complete on all platforms supported by Autotools.  
+If you are packaging libass for distribution, Autotools is recommended;
+when packaging for Windows Meson should work equally well.
+
+Meson lacks integration with testing infrastructure, but works otherwise well on
+Windows. It is suited for static-only builds on any platform well supported by
+Meson and as a Meson subproject.
+Notably, Meson supports MSVC and generation of VS project files.
 
 Related Links
 =============
@@ -43,7 +58,7 @@ The following projects/companies use libass:
 
 Information about the ASS format:
 =================================
-- [ASS format overview (incomplete and partially incorrect)](http://moodub.free.fr/video/ass-specs.doc)
+- [ASS format overview](https://github.com/libass/libass/wiki/ASS-File-Format-Guide)
 - [ASS override tags (Aegisub manual)](http://docs.aegisub.org/latest/ASS_Tags/)
 - [VSFilter source code (Guliverkli2)](http://sourceforge.net/p/guliverkli2/code/HEAD/tree/src/subtitles/)
 

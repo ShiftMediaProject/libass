@@ -210,7 +210,7 @@ typedef struct {
 // Values like current font face, color, screen position, clipping and so on are stored here.
 struct render_context {
     ASS_Renderer *renderer;
-    TextInfo *text_info;
+    TextInfo text_info;
     ASS_Shaper *shaper;
     RasterizerData rasterizer;
 
@@ -334,10 +334,9 @@ struct ass_renderer {
     double par_scale_x;        // x scale applied to all glyphs to preserve text aspect ratio
 
     RenderContext state;
-    TextInfo text_info;
     CacheStore cache;
 
-    const BitmapEngine *engine;
+    BitmapEngine engine;
 
     ASS_Style user_override_style;
 };

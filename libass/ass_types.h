@@ -229,6 +229,17 @@ typedef struct ass_event {
  * absolutely can't do that, because the video colorspace is required
  * in order to handle this as intended. API users must use the exposed
  * information to perform color mangling as described above.
+ *
+ * Further note all of the above only concerns the RGB values.
+ * Color primaries and transfer charateristics of ASS subtitles
+ * must always match their associated video when placed on top of SDR video.
+ *
+ * Subs on HDR video need additional consideration to yield satisfactory results,
+ * but unfortunately no mechanisms for this are standardized yet.
+ * Until such mechanisms are introduced and sub files start to enable them,
+ * all subtitles are to be considered SDR. When placed on top of HDR video
+ * exact color matching is not relevant and the choice of SDR colorspace
+ * to render subs in is left to the presenter.
  */
 typedef enum ASS_YCbCrMatrix {
     YCBCR_DEFAULT = 0,  // Header missing

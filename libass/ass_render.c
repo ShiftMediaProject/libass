@@ -76,6 +76,29 @@ static void text_info_done(TextInfo* text_info)
     free(text_info->combined_bitmaps);
 }
 
+static bool render_context_init(RenderContext *state, ASS_Renderer *priv)
+{
+    state->renderer = priv;
+
+    if (!text_info_init(&state->text_info))
+        return false;
+
+    if (!(state->shaper = ass_shaper_new(priv->cache.metrics_cache)))
+        return false;
+
+    return ass_rasterizer_init(&priv->engine, &state->rasterizer, RASTERIZER_PRECISION);
+}
+
+static void render_context_done(RenderContext *state)
+{
+    ass_rasterizer_done(&state->rasterizer);
+
+    if (state->shaper)
+        ass_shaper_free(state->shaper);
+
+    text_info_done(&state->text_info);
+}
+
 ASS_Renderer *ass_renderer_init(ASS_Library *library)
 {
     int error;
@@ -106,21 +129,11 @@ ASS_Renderer *ass_renderer_init(ASS_Library *library)
     priv->ftlibrary = ft;
     // images_root and related stuff is zero-filled in calloc
 
-#if CONFIG_ASM && ARCH_X86
-    bool sse2, avx2;
-    ass_cpu_capabilities(&sse2, &avx2);
-    if (avx2)
-        priv->engine = &ass_bitmap_engine_avx2;
-    else if (sse2)
-        priv->engine = &ass_bitmap_engine_sse2;
-    else
-        priv->engine = &ass_bitmap_engine_c;
-#else
-    priv->engine = &ass_bitmap_engine_c;
+    unsigned flags = ASS_CPU_FLAG_ALL;
+#if CONFIG_LARGE_TILES
+    flags |= ASS_FLAG_LARGE_TILES;
 #endif
-
-    if (!ass_rasterizer_init(priv->engine, &priv->state.rasterizer, RASTERIZER_PRECISION))
-        goto fail;
+    priv->engine = ass_bitmap_engine_init(flags);
 
     priv->cache.font_cache = ass_font_cache_create();
     priv->cache.bitmap_cache = ass_bitmap_cache_create();
@@ -134,19 +147,13 @@ ASS_Renderer *ass_renderer_init(ASS_Library *library)
     priv->cache.bitmap_max_size = BITMAP_CACHE_MAX_SIZE;
     priv->cache.composite_max_size = COMPOSITE_CACHE_MAX_SIZE;
 
-    if (!text_info_init(&priv->text_info))
+    if (!render_context_init(&priv->state, priv))
         goto fail;
 
     priv->user_override_style.Name = "OverrideStyle"; // name insignificant
 
-    priv->state.renderer = priv;
-    priv->state.text_info = &priv->text_info;
-
     priv->settings.font_size_coeff = 1.;
     priv->settings.selective_style_overrides = ASS_OVERRIDE_BIT_SELECTIVE_FONT_SCALE;
-
-    if (!(priv->state.shaper = ass_shaper_new(priv->cache.metrics_cache)))
-        goto fail;
 
     ass_shaper_info(library);
     priv->settings.shaper = ASS_SHAPING_COMPLEX;
@@ -174,10 +181,7 @@ void ass_renderer_done(ASS_Renderer *render_priv)
     ass_cache_done(render_priv->cache.bitmap_cache);
     ass_cache_done(render_priv->cache.outline_cache);
     ass_cache_done(render_priv->cache.metrics_cache);
-    ass_shaper_free(render_priv->state.shaper);
     ass_cache_done(render_priv->cache.font_cache);
-
-    ass_rasterizer_done(&render_priv->state.rasterizer);
 
     if (render_priv->fontselect)
         ass_fontselect_free(render_priv->fontselect);
@@ -185,7 +189,7 @@ void ass_renderer_done(ASS_Renderer *render_priv)
         FT_Done_FreeType(render_priv->ftlibrary);
     free(render_priv->eimg);
 
-    text_info_done(&render_priv->text_info);
+    render_context_done(&render_priv->state);
 
     free(render_priv->settings.default_font);
     free(render_priv->settings.default_family);
@@ -755,7 +759,7 @@ static void blend_vector_clip(RenderContext *state, ASS_Image *head)
         bleft = left - bx;
         btop = top - by;
 
-        unsigned align = 1 << render_priv->engine->align_order;
+        unsigned align = 1 << render_priv->engine.align_order;
         if (state->clip_drawing_mode) {
             // Inverse clip
             if (ax + aw < bx || ay + ah < by || ax > bx + bw ||
@@ -770,9 +774,9 @@ static void blend_vector_clip(RenderContext *state, ASS_Image *head)
 
             // Blend together
             memcpy(nbuffer, abuffer, ((ah - 1) * as) + aw);
-            render_priv->engine->imul_bitmaps(nbuffer + atop * as + aleft, as,
-                                              bbuffer + btop * bs + bleft, bs,
-                                              w, h);
+            render_priv->engine.imul_bitmaps(nbuffer + atop * as + aleft, as,
+                                             bbuffer + btop * bs + bleft, bs,
+                                             w, h);
         } else {
             // Regular clip
             if (ax + aw < bx || ay + ah < by || ax > bx + bw ||
@@ -788,10 +792,10 @@ static void blend_vector_clip(RenderContext *state, ASS_Image *head)
                 break;
 
             // Blend together
-            render_priv->engine->mul_bitmaps(nbuffer, ns,
-                                             abuffer + atop * as + aleft, as,
-                                             bbuffer + btop * bs + bleft, bs,
-                                             w, h);
+            render_priv->engine.mul_bitmaps(nbuffer, ns,
+                                            abuffer + atop * as + aleft, as,
+                                            bbuffer + btop * bs + bleft, bs,
+                                            w, h);
             cur->dst_x += aleft;
             cur->dst_y += atop;
             cur->w = w;
@@ -816,8 +820,8 @@ static ASS_Image *render_text(RenderContext *state)
 {
     ASS_Image *head;
     ASS_Image **tail = &head;
-    unsigned n_bitmaps = state->text_info->n_bitmaps;
-    CombinedBitmapInfo *bitmaps = state->text_info->combined_bitmaps;
+    unsigned n_bitmaps = state->text_info.n_bitmaps;
+    CombinedBitmapInfo *bitmaps = state->text_info.combined_bitmaps;
 
     for (unsigned i = 0; i < n_bitmaps; i++) {
         CombinedBitmapInfo *info = &bitmaps[i];
@@ -1015,15 +1019,15 @@ ASS_Vector ass_layout_res(ASS_Renderer *render_priv)
         return (ASS_Vector) { track->PlayResX, track->PlayResY };
     if (settings->par > 1)
         return (ASS_Vector) {
-            lround(track->PlayResY * render_priv->frame_content_width / render_priv->frame_content_height
-                    / settings->par),
+            FFMAX(1, lround(track->PlayResY * render_priv->frame_content_width
+                    / render_priv->frame_content_height / settings->par)),
             track->PlayResY
         };
     else
         return (ASS_Vector) {
             track->PlayResX,
-            lround(track->PlayResX * render_priv->frame_content_height / render_priv->frame_content_width
-                    * settings->par)
+            FFMAX(1, lround(track->PlayResX * render_priv->frame_content_height
+                    / render_priv->frame_content_width * settings->par))
         };
 }
 
@@ -1156,9 +1160,7 @@ static void free_render_context(RenderContext *state)
     state->family.len = 0;
     state->clip_drawing_text.str = NULL;
     state->clip_drawing_text.len = 0;
-
-    if (state->text_info)
-        state->text_info->length = 0;
+    state->text_info.length = 0;
 }
 
 /**
@@ -1551,6 +1553,11 @@ get_bitmap_glyph(RenderContext *state, GlyphInfo *info,
         *pos = *pos_o;
 }
 
+static inline size_t outline_size(const ASS_Outline* outline)
+{
+    return sizeof(ASS_Vector) * outline->n_points + outline->n_segments;
+}
+
 size_t ass_bitmap_construct(void *key, void *value, void *priv)
 {
     RenderContext *state = priv;
@@ -1574,14 +1581,15 @@ size_t ass_bitmap_construct(void *key, void *value, void *priv)
     ass_outline_free(&outline[0]);
     ass_outline_free(&outline[1]);
 
-    return sizeof(BitmapHashKey) + sizeof(Bitmap) + bitmap_size(bm);
+    return sizeof(BitmapHashKey) + sizeof(Bitmap) + bitmap_size(bm) +
+           sizeof(OutlineHashValue) + outline_size(&k->outline->outline[0]) + outline_size(&k->outline->outline[1]);
 }
 
 static void measure_text_on_eol(RenderContext *state, double scale, int cur_line,
                                 int max_asc, int max_desc,
                                 double max_border_x, double max_border_y)
 {
-    TextInfo *text_info = state->text_info;
+    TextInfo *text_info = &state->text_info;
     text_info->lines[cur_line].asc  = scale * max_asc;
     text_info->lines[cur_line].desc = scale * max_desc;
     text_info->height += scale * max_asc + scale * max_desc;
@@ -1609,7 +1617,7 @@ static void measure_text_on_eol(RenderContext *state, double scale, int cur_line
 static void measure_text(RenderContext *state)
 {
     ASS_Renderer *render_priv = state->renderer;
-    TextInfo *text_info = state->text_info;
+    TextInfo *text_info = &state->text_info;
     text_info->height = 0;
     text_info->border_x = 0;
 
@@ -1662,7 +1670,7 @@ static void trim_whitespace(RenderContext *state)
 {
     int i, j;
     GlyphInfo *cur;
-    TextInfo *ti = state->text_info;
+    TextInfo *ti = &state->text_info;
 
     // Mark trailing spaces
     i = ti->length - 1;
@@ -1733,7 +1741,7 @@ static void
 wrap_lines_naive(RenderContext *state, double max_text_width, char *unibrks)
 {
     ASS_Renderer *render_priv = state->renderer;
-    TextInfo *text_info = state->text_info;
+    TextInfo *text_info = &state->text_info;
     GlyphInfo *s1  = text_info->glyphs; // current line start
     int last_breakable = -1;
     int break_type = 0;
@@ -1813,7 +1821,7 @@ static inline GlyphInfo *rewind_trailing_spaces(GlyphInfo *start1, GlyphInfo* st
 static void
 wrap_lines_rebalance(RenderContext *state, double max_text_width, char *unibrks)
 {
-    TextInfo *text_info = state->text_info;
+    TextInfo *text_info = &state->text_info;
     int exit = 0;
 
 #define DIFF(x,y) (((x) < (y)) ? (y - x) : (x - y))
@@ -1882,7 +1890,7 @@ wrap_lines_rebalance(RenderContext *state, double max_text_width, char *unibrks)
 static void
 wrap_lines_measure(RenderContext *state, char *unibrks)
 {
-    TextInfo *text_info = state->text_info;
+    TextInfo *text_info = &state->text_info;
     int cur_line = 1;
     int i = 0;
 
@@ -1934,7 +1942,7 @@ wrap_lines_smart(RenderContext *state, double max_text_width)
 
 #ifdef CONFIG_UNIBREAK
     ASS_Renderer *render_priv = state->renderer;
-    TextInfo *text_info = state->text_info;
+    TextInfo *text_info = &state->text_info;
     if (render_priv->track->parser_priv->feature_flags & FEATURE_MASK(ASS_FEATURE_WRAP_UNICODE)) {
         unibrks = text_info->breaks;
         set_linebreaks_utf32(
@@ -2034,7 +2042,7 @@ fix_glyph_scaling(ASS_Renderer *priv, GlyphInfo *glyph)
 // Initial run splitting based purely on the characters' styles
 static void split_style_runs(RenderContext *state)
 {
-    TextInfo *text_info = state->text_info;
+    TextInfo *text_info = &state->text_info;
     Effect last_effect_type = text_info->glyphs[0].effect_type;
     text_info->glyphs[0].starts_new_run = true;
     for (int i = 1; i < text_info->length; i++) {
@@ -2080,7 +2088,7 @@ static void split_style_runs(RenderContext *state)
 // Fill render_priv->text_info.
 static bool parse_events(RenderContext *state, ASS_Event *event)
 {
-    TextInfo *text_info = state->text_info;
+    TextInfo *text_info = &state->text_info;
     ASS_Renderer *render_priv = state->renderer;
 
     char *p = event->Text, *q;
@@ -2215,10 +2223,10 @@ fail:
 // Process render_priv->text_info and load glyph outlines.
 static void retrieve_glyphs(RenderContext *state)
 {
-    GlyphInfo *glyphs = state->text_info->glyphs;
+    GlyphInfo *glyphs = state->text_info.glyphs;
     int i;
 
-    for (i = 0; i < state->text_info->length; i++) {
+    for (i = 0; i < state->text_info.length; i++) {
         GlyphInfo *info = glyphs + i;
         do {
             get_outline_glyph(state, info);
@@ -2246,8 +2254,8 @@ static void retrieve_glyphs(RenderContext *state)
 static void preliminary_layout(RenderContext *state)
 {
     ASS_Vector pen = { 0, 0 };
-    for (int i = 0; i < state->text_info->length; i++) {
-        GlyphInfo *info = state->text_info->glyphs + i;
+    for (int i = 0; i < state->text_info.length; i++) {
+        GlyphInfo *info = state->text_info.glyphs + i;
         ASS_Vector cluster_pen = pen;
         do {
             info->pos.x = cluster_pen.x;
@@ -2258,7 +2266,7 @@ static void preliminary_layout(RenderContext *state)
 
             info = info->next;
         } while (info);
-        info = state->text_info->glyphs + i;
+        info = state->text_info.glyphs + i;
         pen.x += info->cluster_advance.x;
         pen.y += info->cluster_advance.y;
     }
@@ -2268,7 +2276,7 @@ static void preliminary_layout(RenderContext *state)
 static void reorder_text(RenderContext *state)
 {
     ASS_Renderer *render_priv = state->renderer;
-    TextInfo *text_info = state->text_info;
+    TextInfo *text_info = &state->text_info;
     FriBidiStrIndex *cmap = ass_shaper_reorder(state->shaper, text_info);
     if (!cmap) {
         ass_msg(render_priv->library, MSGL_ERR, "Failed to reorder text");
@@ -2307,7 +2315,7 @@ static void reorder_text(RenderContext *state)
 static void apply_baseline_shear(RenderContext *state)
 {
     ASS_Renderer *render_priv = state->renderer;
-    TextInfo *text_info = state->text_info;
+    TextInfo *text_info = &state->text_info;
     FriBidiStrIndex *cmap = ass_shaper_get_reorder_map(state->shaper);
     int32_t shear = 0;
     bool whole_text_layout =
@@ -2330,7 +2338,7 @@ static void apply_baseline_shear(RenderContext *state)
 
 static void align_lines(RenderContext *state, double max_text_width)
 {
-    TextInfo *text_info = state->text_info;
+    TextInfo *text_info = &state->text_info;
     GlyphInfo *glyphs = text_info->glyphs;
     int i, j;
     double width = 0;
@@ -2414,7 +2422,7 @@ static void calculate_rotation_params(RenderContext *state, ASS_DRect *bbox,
         center.y = device_y + by;
     }
 
-    TextInfo *text_info = state->text_info;
+    TextInfo *text_info = &state->text_info;
     for (int i = 0; i < text_info->length; i++) {
         GlyphInfo *info = text_info->glyphs + i;
         while (info) {
@@ -2482,7 +2490,7 @@ static void render_and_combine_glyphs(RenderContext *state,
                                       double device_x, double device_y)
 {
     ASS_Renderer *render_priv = state->renderer;
-    TextInfo *text_info = state->text_info;
+    TextInfo *text_info = &state->text_info;
     int left = render_priv->settings.left_margin;
     device_x = (device_x - left) * render_priv->par_scale_x + left;
     unsigned nb_bitmaps = 0;
@@ -2709,10 +2717,10 @@ size_t ass_composite_construct(void *key, void *value, void *priv)
 
     int bord = ass_be_padding(k->filter.be);
     if (!bord && n_bm == 1) {
-        ass_copy_bitmap(render_priv->engine, &v->bm, last->bm);
+        ass_copy_bitmap(&render_priv->engine, &v->bm, last->bm);
         v->bm.left += last->pos.x;
         v->bm.top  += last->pos.y;
-    } else if (n_bm && ass_alloc_bitmap(render_priv->engine, &v->bm,
+    } else if (n_bm && ass_alloc_bitmap(&render_priv->engine, &v->bm,
                                         rect.x_max - rect.x_min + 2 * bord,
                                         rect.y_max - rect.y_min + 2 * bord,
                                         true)) {
@@ -2728,16 +2736,16 @@ size_t ass_composite_construct(void *key, void *value, void *priv)
             assert(x >= 0 && x + src->w <= dst->w);
             assert(y >= 0 && y + src->h <= dst->h);
             unsigned char *buf = dst->buffer + y * dst->stride + x;
-            render_priv->engine->add_bitmaps(buf, dst->stride,
-                                             src->buffer, src->stride,
-                                             src->w, src->h);
+            render_priv->engine.add_bitmaps(buf, dst->stride,
+                                            src->buffer, src->stride,
+                                            src->w, src->h);
         }
     }
     if (!bord && n_bm_o == 1) {
-        ass_copy_bitmap(render_priv->engine, &v->bm_o, last_o->bm_o);
+        ass_copy_bitmap(&render_priv->engine, &v->bm_o, last_o->bm_o);
         v->bm_o.left += last_o->pos_o.x;
         v->bm_o.top  += last_o->pos_o.y;
-    } else if (n_bm_o && ass_alloc_bitmap(render_priv->engine, &v->bm_o,
+    } else if (n_bm_o && ass_alloc_bitmap(&render_priv->engine, &v->bm_o,
                                           rect_o.x_max - rect_o.x_min + 2 * bord,
                                           rect_o.y_max - rect_o.y_min + 2 * bord,
                                           true)) {
@@ -2753,9 +2761,9 @@ size_t ass_composite_construct(void *key, void *value, void *priv)
             assert(x >= 0 && x + src->w <= dst->w);
             assert(y >= 0 && y + src->h <= dst->h);
             unsigned char *buf = dst->buffer + y * dst->stride + x;
-            render_priv->engine->add_bitmaps(buf, dst->stride,
-                                             src->buffer, src->stride,
-                                             src->w, src->h);
+            render_priv->engine.add_bitmaps(buf, dst->stride,
+                                            src->buffer, src->stride,
+                                            src->w, src->h);
         }
     }
 
@@ -2763,22 +2771,22 @@ size_t ass_composite_construct(void *key, void *value, void *priv)
     double r2x = restore_blur(k->filter.blur_x);
     double r2y = restore_blur(k->filter.blur_y);
     if (!(flags & FILTER_NONZERO_BORDER) || (flags & FILTER_BORDER_STYLE_3))
-        ass_synth_blur(render_priv->engine, &v->bm, k->filter.be, r2x, r2y);
-    ass_synth_blur(render_priv->engine, &v->bm_o, k->filter.be, r2x, r2y);
+        ass_synth_blur(&render_priv->engine, &v->bm, k->filter.be, r2x, r2y);
+    ass_synth_blur(&render_priv->engine, &v->bm_o, k->filter.be, r2x, r2y);
 
     if (!(flags & FILTER_FILL_IN_BORDER) && !(flags & FILTER_FILL_IN_SHADOW))
         ass_fix_outline(&v->bm, &v->bm_o);
 
     if (flags & FILTER_NONZERO_SHADOW) {
         if (flags & FILTER_NONZERO_BORDER) {
-            ass_copy_bitmap(render_priv->engine, &v->bm_s, &v->bm_o);
+            ass_copy_bitmap(&render_priv->engine, &v->bm_s, &v->bm_o);
             if ((flags & FILTER_FILL_IN_BORDER) && !(flags & FILTER_FILL_IN_SHADOW))
                 ass_fix_outline(&v->bm, &v->bm_s);
         } else if (flags & FILTER_BORDER_STYLE_3) {
             v->bm_s = v->bm_o;
             memset(&v->bm_o, 0, sizeof(v->bm_o));
         } else {
-            ass_copy_bitmap(render_priv->engine, &v->bm_s, &v->bm);
+            ass_copy_bitmap(&render_priv->engine, &v->bm_s, &v->bm);
         }
 
         // Works right even for negative offsets
@@ -2792,6 +2800,7 @@ size_t ass_composite_construct(void *key, void *value, void *priv)
         ass_fix_outline(&v->bm, &v->bm_o);
 
     return sizeof(CompositeHashKey) + sizeof(CompositeHashValue) +
+        k->bitmap_count * sizeof(BitmapRef) +
         bitmap_size(&v->bm) + bitmap_size(&v->bm_o) + bitmap_size(&v->bm_s);
 }
 
@@ -2852,7 +2861,7 @@ ass_render_event(RenderContext *state, ASS_Event *event,
     if (!parse_events(state, event))
         return false;
 
-    TextInfo *text_info = state->text_info;
+    TextInfo *text_info = &state->text_info;
     if (text_info->length == 0) {
         // no valid symbols in the event; this can be smth like {comment}
         free_render_context(state);
@@ -2987,20 +2996,20 @@ ass_render_event(RenderContext *state, ASS_Event *event,
     // fix clip coordinates
     if (state->explicit || !render_priv->settings.use_margins) {
         state->clip_x0 =
-            x2scr_pos_scaled(render_priv, state->clip_x0);
+            lround(x2scr_pos_scaled(render_priv, state->clip_x0));
         state->clip_x1 =
-            x2scr_pos_scaled(render_priv, state->clip_x1);
+            lround(x2scr_pos_scaled(render_priv, state->clip_x1));
         state->clip_y0 =
-            y2scr_pos(render_priv, state->clip_y0);
+            lround(y2scr_pos(render_priv, state->clip_y0));
         state->clip_y1 =
-            y2scr_pos(render_priv, state->clip_y1);
+            lround(y2scr_pos(render_priv, state->clip_y1));
 
         if (state->explicit) {
             // we still need to clip against screen boundaries
-            double zx = x2scr_pos_scaled(render_priv, 0);
-            double zy = y2scr_pos(render_priv, 0);
-            double sx = x2scr_pos_scaled(render_priv, render_priv->track->PlayResX);
-            double sy = y2scr_pos(render_priv, render_priv->track->PlayResY);
+            int zx = render_priv->settings.left_margin;
+            int zy = render_priv->settings.top_margin;
+            int sx = zx + render_priv->frame_content_width;
+            int sy = zy + render_priv->frame_content_height;
 
             state->clip_x0 = FFMAX(state->clip_x0, zx);
             state->clip_y0 = FFMAX(state->clip_y0, zy);
@@ -3016,8 +3025,8 @@ ass_render_event(RenderContext *state, ASS_Event *event,
     }
 
     if (state->evt_type & EVENT_VSCROLL) {
-        double y0 = y2scr_pos(render_priv, state->scroll_y0);
-        double y1 = y2scr_pos(render_priv, state->scroll_y1);
+        int y0 = lround(y2scr_pos(render_priv, state->scroll_y0));
+        int y1 = lround(y2scr_pos(render_priv, state->scroll_y1));
 
         state->clip_y0 = FFMAX(state->clip_y0, y0);
         state->clip_y1 = FFMIN(state->clip_y1, y1);
