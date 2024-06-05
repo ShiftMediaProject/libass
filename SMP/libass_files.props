@@ -44,7 +44,6 @@
     <ClCompile Include="..\libass\ass_outline.c" />
     <ClCompile Include="..\libass\ass_parse.c" />
     <ClCompile Include="..\libass\ass_rasterizer.c" />
-    <ClCompile Include="..\libass\ass_rasterizer_c.c" />
     <ClCompile Include="..\libass\ass_render.c" />
     <ClCompile Include="..\libass\ass_render_api.c" />
     <ClCompile Include="..\libass\ass_shaper.c" />
