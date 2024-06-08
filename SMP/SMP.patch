@@ -1,5 +1,5 @@
 diff --git a/libass/ass_compat.h b/libass/ass_compat.h
-index 38df913..47433d8 100644
+index 52ac282..852d801 100644
 --- a/libass/ass_compat.h
 +++ b/libass/ass_compat.h
 @@ -24,6 +24,10 @@

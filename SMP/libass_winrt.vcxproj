@@ -14,7 +14,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugWinRT|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>inline=_inline;_USE_MATH_DEFINES;LIBXML_STATIC;FRIBIDI_LIB_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\;..\;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;..\;..\libass;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4005;4244;4267;4018;4334;4101;4996;4146;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Lib>
@@ -60,7 +60,7 @@ del /f /q $(OutDir)\licenses\libass.txt
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugWinRT|x64'">
     <ClCompile>
       <PreprocessorDefinitions>inline=_inline;_USE_MATH_DEFINES;LIBXML_STATIC;FRIBIDI_LIB_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\;..\;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;..\;..\libass;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4005;4244;4267;4018;4334;4101;4996;4146;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Lib>
@@ -106,7 +106,7 @@ del /f /q $(OutDir)\licenses\libass.txt
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugDLLWinRT|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>inline=_inline;_USE_MATH_DEFINES;LIBXML_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\;..\;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;..\;..\libass;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4005;4244;4267;4018;4334;4101;4996;4146;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
@@ -153,7 +153,7 @@ del /f /q $(OutDir)\licenses\libass.txt
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='DebugDLLWinRT|x64'">
     <ClCompile>
       <PreprocessorDefinitions>inline=_inline;_USE_MATH_DEFINES;LIBXML_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\;..\;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;..\;..\libass;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4005;4244;4267;4018;4334;4101;4996;4146;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
@@ -200,7 +200,7 @@ del /f /q $(OutDir)\licenses\libass.txt
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseWinRT|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>inline=_inline;_USE_MATH_DEFINES;LIBXML_STATIC;FRIBIDI_LIB_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\;..\;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;..\;..\libass;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4005;4244;4267;4018;4334;4101;4996;4146;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Lib>
@@ -246,7 +246,7 @@ del /f /q $(OutDir)\licenses\libass.txt
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseWinRT|x64'">
     <ClCompile>
       <PreprocessorDefinitions>inline=_inline;_USE_MATH_DEFINES;LIBXML_STATIC;FRIBIDI_LIB_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\;..\;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;..\;..\libass;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4005;4244;4267;4018;4334;4101;4996;4146;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Lib>
@@ -292,7 +292,7 @@ del /f /q $(OutDir)\licenses\libass.txt
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseDLLWinRT|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>inline=_inline;_USE_MATH_DEFINES;LIBXML_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\;..\;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;..\;..\libass;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4005;4244;4267;4018;4334;4101;4996;4146;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
@@ -339,7 +339,7 @@ del /f /q $(OutDir)\licenses\libass.txt
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseDLLWinRTStaticDeps|Win32'">
     <ClCompile>
       <PreprocessorDefinitions>inline=_inline;_USE_MATH_DEFINES;LIBXML_STATIC;FRIBIDI_LIB_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\;..\;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;..\;..\libass;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4005;4244;4267;4018;4334;4101;4996;4146;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
@@ -386,7 +386,7 @@ del /f /q $(OutDir)\licenses\libass.txt
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseDLLWinRT|x64'">
     <ClCompile>
       <PreprocessorDefinitions>inline=_inline;_USE_MATH_DEFINES;LIBXML_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\;..\;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;..\;..\libass;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4005;4244;4267;4018;4334;4101;4996;4146;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
@@ -433,7 +433,7 @@ del /f /q $(OutDir)\licenses\libass.txt
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseDLLWinRTStaticDeps|x64'">
     <ClCompile>
       <PreprocessorDefinitions>inline=_inline;_USE_MATH_DEFINES;LIBXML_STATIC;FRIBIDI_LIB_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>.\;..\;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\;..\;..\libass;$(OutDir)\include\freetype2;$(OutDir)\include\harfbuzz;$(OutDir)\include\fribidi;$(ProjectDir)\..\..\prebuilt\include\freetype2;$(ProjectDir)\..\..\prebuilt\include\harfbuzz;$(ProjectDir)\..\..\prebuilt\include\fribidi;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DisableSpecificWarnings>4005;4244;4267;4018;4334;4101;4996;4146;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>

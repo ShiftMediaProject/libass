@@ -22,6 +22,12 @@
     <Filter Include="Header Files\libass\x86">
       <UniqueIdentifier>{cecd9ba8-49f4-46cf-94ac-bdb674aaea96}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\libass\c">
+      <UniqueIdentifier>{964b12f0-6a9e-40de-952b-56cd26d7a53e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\libass\c">
+      <UniqueIdentifier>{9882a167-26eb-475a-b614-6fa6b1c7a5d7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="config.h">
@@ -72,9 +78,6 @@
     <ClInclude Include="..\libass\ass_rasterizer.h">
       <Filter>Header Files\libass</Filter>
     </ClInclude>
-    <ClInclude Include="..\libass\ass_func_template.h">
-      <Filter>Header Files\libass</Filter>
-    </ClInclude>
     <ClInclude Include="..\libass\ass_fontselect.h">
       <Filter>Header Files\libass</Filter>
     </ClInclude>
@@ -103,6 +106,15 @@
       <Filter>Header Files\libass</Filter>
     </ClInclude>
     <ClInclude Include="..\libass\wyhash.h">
+      <Filter>Header Files\libass</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libass\c\blur_template.h">
+      <Filter>Header Files\libass\c</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libass\c\rasterizer_template.h">
+      <Filter>Header Files\libass\c</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libass\ass_bitmap_engine.h">
       <Filter>Header Files\libass</Filter>
     </ClInclude>
   </ItemGroup>
@@ -146,9 +158,6 @@
     <ClCompile Include="..\libass\ass_font.c">
       <Filter>Source Files\libass</Filter>
     </ClCompile>
-    <ClCompile Include="..\libass\ass_rasterizer_c.c">
-      <Filter>Source Files\libass</Filter>
-    </ClCompile>
     <ClCompile Include="..\libass\ass_rasterizer.c">
       <Filter>Source Files\libass</Filter>
     </ClCompile>
@@ -168,6 +177,21 @@
       <Filter>Source Files\libass</Filter>
     </ClCompile>
     <ClCompile Include="..\libass\ass_filesystem.c">
+      <Filter>Source Files\libass</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libass\c\c_be_blur.c">
+      <Filter>Source Files\libass\c</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libass\c\c_blend_bitmaps.c">
+      <Filter>Source Files\libass\c</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libass\c\c_blur.c">
+      <Filter>Source Files\libass\c</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libass\c\c_rasterizer.c">
+      <Filter>Source Files\libass\c</Filter>
+    </ClCompile>
+    <ClCompile Include="..\libass\ass_bitmap_engine.c">
       <Filter>Source Files\libass</Filter>
     </ClCompile>
   </ItemGroup>
