@@ -41,8 +41,11 @@ jobs:
             # Crash Tests detect (false?) leaks in Fontconfig, and
             # various regression test fail, assumed due to older deps
             skip_tests: yes
-          # MacOS build
-          - os: macos-latest
+          # MacOS Intel
+          - os: macos-13
+            cc: clang
+          # MacOS arm64
+          - os: macos-14
             cc: clang
           # Add a Windows build (MinGW-gcc via MSYS2) with no extras
           - os: windows-2019
@@ -66,11 +69,31 @@ jobs:
       ART_SAMPLES: ext_art-samples
 
     steps:
+      # Available core count changes on runner type and over time, but GHA
+      # doesn’t easily expose this, so we’ll have to query this ourselves. Based on:
+      # https://github.com/orgs/community/discussions/25057#discussioncomment-5957241
+      - name: determine logical cpu core count
+        id: cpus
+        shell: python
+        run: |
+          import os
+          import multiprocessing
+
+          try:
+            num_cpus = len(os.sched_getaffinity(0))
+          except AttributeError:
+            num_cpus = multiprocessing.cpu_count()
+          print(f"num_cpus={num_cpus}")
+
+          output_file = os.environ["GITHUB_OUTPUT"]
+          with open(output_file, "a", encoding="utf-8") as output_stream:
+            output_stream.write(f"count={num_cpus}\n")
+
       - name: checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: download test samples
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: libass/libass-tests
           path: ${{ env.ART_SAMPLES }}
@@ -115,10 +138,8 @@ jobs:
           case "${{ matrix.docker_image || matrix.os }}" in
             macos-*)
               #brew update
-              # fontconfig, freetype, autoconf and libtool are preinstalled
-              # and `brew install` fails if a non-uptodate version is already installed
-              #brew upgrade fontconfig freetype autoconf libtool
-              brew install automake fribidi harfbuzz nasm
+              brew install autoconf automake libtool nasm pkg-config \
+                           harfbuzz freetype fribidi fontconfig
               ;;
             windows-*)
               pre="$MINGW_PACKAGE_PREFIX"
@@ -165,12 +186,8 @@ jobs:
           #        but when SIGILL'ing the lib is not needed
           # ASAN:  Not supported with musl and in Windows
           case "${{ matrix.docker_image || matrix.os }}" in
-            alpine*)
+            alpine*|windows-*)
               flags="$uflags -fsanitize-undefined-trap-on-error" ;;
-            windows-*)
-              # TEMPORARY: MinGW's headers have problematic code in isnan's inline version
-              # triggering UBSAN. Until the fix is available in MSYS2, avoid inlines.
-              flags="$uflags -fsanitize-undefined-trap-on-error -D__CRT__NO_INLINE=1" ;;
             *)
               flags="$aflags $uflags" ;;
           esac
@@ -208,10 +225,10 @@ jobs:
 
       - name: distcheck
         if: matrix.do_distc == 'yes'
-        run: make -j 2 distcheck
+        run: make -j '${{ steps.cpus.outputs.count }}' distcheck
 
       - name: compile
-        run: make -j 2
+        run: make -j '${{ steps.cpus.outputs.count }}'
 
       - name: ensure internal functions are namespaced
         if: startsWith(matrix.os, 'ubuntu-')
@@ -298,7 +315,7 @@ jobs:
           # Coverity Build
           echo "Starting Coverity build..."
           #mkdir "$RES_DIR" # already done by cov-build
-          COVERITY_UNSUPPORTED=1 cov-build --dir "$RES_DIR" make -j 2
+          COVERITY_UNSUPPORTED=1 cov-build --dir "$RES_DIR" make -j '${{ steps.cpus.outputs.count }}'
           cov-import-scm --dir "$RES_DIR" --scm git --log "$RES_DIR/scm_log.txt" 2>&1
 
           # Submit results to Coverity's server

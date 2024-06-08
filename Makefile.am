@@ -1,16 +1,28 @@
 ACLOCAL_AMFLAGS = -I m4
+AM_CPPFLAGS = -I$(top_srcdir)/libass
 AM_CFLAGS = -std=gnu99 -Wall -Wextra -Wno-sign-compare -Wno-unused-parameter \
             -Werror-implicit-function-declaration -Wstrict-prototypes        \
             -Wpointer-arith -Wredundant-decls -Wno-missing-field-initializers\
             -D_GNU_SOURCE
 
-EXTRA_DIST = libass.pc.in Changelog MAINTAINERS ltnasm.sh
+EXTRA_DIST = libass.pc.in Changelog MAINTAINERS RELEASEVERSION ltnasm.sh
+
+# Meson build setup
+EXTRA_DIST += gen_defs.py meson_options.txt meson.build \
+              libass/meson.build libass/ass/meson.build \
+              profile/meson.build test/meson.build
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libass.pc
 
+nasm_verbose = $(nasm_verbose_$(V))
+nasm_verbose_ = $(nasm_verbose_$(AM_DEFAULT_VERBOSITY))
+nasm_verbose_0 = @echo "  NASM    " $@;
+
 lib_LTLIBRARIES =
 noinst_PROGRAMS =
+check_PROGRAMS =
+TESTS =
 
 include libass/Makefile_library.am
 include Makefile_util.am

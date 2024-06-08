@@ -36,28 +36,6 @@
 #include "ass_render.h"
 
 
-#define ALIGN           C_ALIGN_ORDER
-#define DECORATE(func)  ass_##func##_c
-#include "ass_func_template.h"
-#undef ALIGN
-#undef DECORATE
-
-#if CONFIG_ASM && ARCH_X86
-
-#define ALIGN           4
-#define DECORATE(func)  ass_##func##_sse2
-#include "ass_func_template.h"
-#undef ALIGN
-#undef DECORATE
-
-#define ALIGN           5
-#define DECORATE(func)  ass_##func##_avx2
-#include "ass_func_template.h"
-#undef ALIGN
-#undef DECORATE
-
-#endif
-
 static void be_blur_pre(uint8_t *buf, intptr_t stride, intptr_t width, intptr_t height)
 {
     for (int y = 0; y < height; ++y)
@@ -192,7 +170,7 @@ bool ass_outline_to_bitmap(RenderContext *state, Bitmap *bm,
     int32_t w = x_max - x_min;
     int32_t h = y_max - y_min;
 
-    int mask = (1 << render_priv->engine->tile_order) - 1;
+    int mask = (1 << render_priv->engine.tile_order) - 1;
 
     // XXX: is that possible to trigger at all?
     if (w < 0 || h < 0 || w > INT_MAX - mask || h > INT_MAX - mask) {
@@ -203,12 +181,12 @@ bool ass_outline_to_bitmap(RenderContext *state, Bitmap *bm,
 
     int32_t tile_w = (w + mask) & ~mask;
     int32_t tile_h = (h + mask) & ~mask;
-    if (!ass_alloc_bitmap(render_priv->engine, bm, tile_w, tile_h, false))
+    if (!ass_alloc_bitmap(&render_priv->engine, bm, tile_w, tile_h, false))
         return false;
     bm->left = x_min;
     bm->top  = y_min;
 
-    if (!ass_rasterizer_fill(render_priv->engine, rst, bm->buffer,
+    if (!ass_rasterizer_fill(&render_priv->engine, rst, bm->buffer,
                              x_min, y_min, bm->stride, tile_h, bm->stride)) {
         ass_msg(render_priv->library, MSGL_WARN, "Failed to rasterize glyph!\n");
         ass_free_bitmap(bm);
@@ -279,121 +257,4 @@ void ass_shift_bitmap(Bitmap *bm, int shift_x, int shift_y)
                 buf[x + y * s] += b;
             }
         }
-}
-
-/**
- * \brief Blur with [[1,2,1], [2,4,2], [1,2,1]] kernel
- * This blur is the same as the one employed by vsfilter.
- * Pure C implementation.
- */
-void ass_be_blur_c(uint8_t *buf, intptr_t stride,
-                   intptr_t width, intptr_t height, uint16_t *tmp)
-{
-    uint16_t *col_pix_buf = tmp;
-    uint16_t *col_sum_buf = tmp + width;
-    unsigned x, y, old_pix, old_sum, temp1, temp2;
-    uint8_t *src, *dst;
-    y = 0;
-
-    {
-        src=buf+y*stride;
-
-        x = 1;
-        old_pix = src[x-1];
-        old_sum = old_pix;
-        for ( ; x < width; x++) {
-            temp1 = src[x];
-            temp2 = old_pix + temp1;
-            old_pix = temp1;
-            temp1 = old_sum + temp2;
-            old_sum = temp2;
-            col_pix_buf[x-1] = temp1;
-            col_sum_buf[x-1] = temp1;
-        }
-        temp1 = old_sum + old_pix;
-        col_pix_buf[x-1] = temp1;
-        col_sum_buf[x-1] = temp1;
-    }
-
-    for (y++; y < height; y++) {
-        src=buf+y*stride;
-        dst=buf+(y-1)*stride;
-
-        x = 1;
-        old_pix = src[x-1];
-        old_sum = old_pix;
-        for ( ; x < width; x++) {
-            temp1 = src[x];
-            temp2 = old_pix + temp1;
-            old_pix = temp1;
-            temp1 = old_sum + temp2;
-            old_sum = temp2;
-
-            temp2 = col_pix_buf[x-1] + temp1;
-            col_pix_buf[x-1] = temp1;
-            dst[x-1] = (col_sum_buf[x-1] + temp2) >> 4;
-            col_sum_buf[x-1] = temp2;
-        }
-        temp1 = old_sum + old_pix;
-        temp2 = col_pix_buf[x-1] + temp1;
-        col_pix_buf[x-1] = temp1;
-        dst[x-1] = (col_sum_buf[x-1] + temp2) >> 4;
-        col_sum_buf[x-1] = temp2;
-    }
-
-    {
-        dst=buf+(y-1)*stride;
-        for (x = 0; x < width; x++)
-            dst[x] = (col_sum_buf[x] + col_pix_buf[x]) >> 4;
-    }
-}
-
-/**
- * \brief Add two bitmaps together at a given position
- * Uses additive blending, clipped to [0,255]. Pure C implementation.
- */
-void ass_add_bitmaps_c(uint8_t *dst, intptr_t dst_stride,
-                       uint8_t *src, intptr_t src_stride,
-                       intptr_t width, intptr_t height)
-{
-    unsigned out;
-    uint8_t* end = dst + dst_stride * height;
-    while (dst < end) {
-        for (unsigned j = 0; j < width; ++j) {
-            out = dst[j] + src[j];
-            dst[j] = FFMIN(out, 255);
-        }
-        dst += dst_stride;
-        src += src_stride;
-    }
-}
-
-void ass_imul_bitmaps_c(uint8_t *dst, intptr_t dst_stride,
-                        uint8_t *src, intptr_t src_stride,
-                        intptr_t width, intptr_t height)
-{
-    uint8_t* end = dst + dst_stride * height;
-    while (dst < end) {
-        for (unsigned j = 0; j < width; ++j) {
-            dst[j] = (dst[j] * (255 - src[j]) + 255) >> 8;
-        }
-        dst += dst_stride;
-        src += src_stride;
-    }
-}
-
-void ass_mul_bitmaps_c(uint8_t *dst, intptr_t dst_stride,
-                       uint8_t *src1, intptr_t src1_stride,
-                       uint8_t *src2, intptr_t src2_stride,
-                       intptr_t width, intptr_t height)
-{
-    uint8_t* end = src1 + src1_stride * height;
-    while (src1 < end) {
-        for (unsigned x = 0; x < width; ++x) {
-            dst[x] = (src1[x] * src2[x] + 255) >> 8;
-        }
-        dst  += dst_stride;
-        src1 += src1_stride;
-        src2 += src2_stride;
-    }
 }
