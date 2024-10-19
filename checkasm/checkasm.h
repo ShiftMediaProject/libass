@@ -30,7 +30,7 @@
 
 #include "config.h"
 
-#include "ass_bitmap.h"
+#include "ass_bitmap_engine.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -333,12 +333,6 @@ void checkasm_stack_clobber(uint64_t clobber, ...);
 #else
 #define ALIGN(line, align) \
     line __attribute__((aligned(align)))
-#endif
-
-#ifdef _MSC_VER
-#define ASM_CALLABLE
-#else
-#define ASM_CALLABLE __attribute__((visibility("hidden")))
 #endif
 
 #endif /* CHECKASM_CHECKASM_H */

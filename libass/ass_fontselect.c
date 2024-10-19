@@ -196,6 +196,8 @@ ASS_FontProvider *
 ass_font_provider_new(ASS_FontSelector *selector, ASS_FontProviderFuncs *funcs,
                       void *data)
 {
+    assert(funcs->check_glyph && funcs->destroy_font);
+
     ASS_FontProvider *provider = calloc(1, sizeof(ASS_FontProvider));
     if (provider == NULL)
         return NULL;
@@ -315,7 +317,7 @@ get_font_info(FT_Library lib, FT_Face face, const char *fallback_family_name,
     info->is_postscript = ass_face_is_postscript(face);
 
     if (num_family) {
-        info->families = calloc(sizeof(char *), num_family);
+        info->families = calloc(num_family, sizeof(char *));
         if (info->families == NULL)
             goto error;
         memcpy(info->families, &families, sizeof(char *) * num_family);
@@ -323,7 +325,7 @@ get_font_info(FT_Library lib, FT_Face face, const char *fallback_family_name,
     }
 
     if (num_fullname) {
-        info->fullnames = calloc(sizeof(char *), num_fullname);
+        info->fullnames = calloc(num_fullname, sizeof(char *));
         if (info->fullnames == NULL)
             goto error;
         memcpy(info->fullnames, &fullnames, sizeof(char *) * num_fullname);
@@ -521,9 +523,7 @@ error:
 
     free_font_info(&implicit_meta);
     free(implicit_meta.postscript_name);
-
-    if (provider->funcs.destroy_font)
-        provider->funcs.destroy_font(data);
+    provider->funcs.destroy_font(data);
 
     return false;
 }
@@ -565,10 +565,7 @@ void ass_font_provider_free(ASS_FontProvider *provider)
 
         if (info->provider == provider) {
             ass_font_provider_free_fontinfo(info);
-
-            if (info->provider->funcs.destroy_font)
-                info->provider->funcs.destroy_font(info->priv);
-
+            info->provider->funcs.destroy_font(info->priv);
             info->provider = NULL;
         }
 

@@ -1,9 +1,11 @@
 AC_INIT(libass, m4_normalize(m4_include([RELEASEVERSION])))
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 AC_CONFIG_MACRO_DIR([m4])
-LT_INIT
 AC_CONFIG_SRCDIR([libass/ass.c])
 AC_CONFIG_HEADERS([config.h])
+AC_CANONICAL_HOST
+
+LT_INIT
 
 # Checks for programs.
 AC_PROG_CC
@@ -47,6 +49,16 @@ AC_ARG_VAR([FUZZ_LDFLAGS],
 AC_ARG_VAR([FUZZ_CPPFLAGS],
     [If fuzzing program is enabled, set this to select alternative modes; see fuzzer source for options.])
 FUZZ_CPPFLAGS="${FUZZ_CPPFLAGS:--DASS_FUZZMODE=0}"
+
+# Checks for flags support
+AX_APPEND_COMPILE_FLAGS([-fno-math-errno])
+
+# Enable some warnings
+AX_APPEND_COMPILE_FLAGS([ \
+    -Wall -Wextra -Wno-sign-compare -Wno-unused-parameter -Wstrict-prototypes \
+    -Wpointer-arith -Werror-implicit-function-declaration -Wredundant-decls \
+    -Wno-missing-field-initializers \
+])
 
 # Checks for available libraries and define corresponding C Macros
 # Start with system libs, then check everything else via pkg-config

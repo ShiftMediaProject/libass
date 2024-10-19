@@ -111,7 +111,6 @@ void ass_update_font(RenderContext *state)
         val = 0;                // normal
     desc.italic = val;
 
-    ass_cache_dec_ref(state->font);
     state->font = ass_font_new(state->renderer, &desc);
 }
 
@@ -333,8 +332,11 @@ char *ass_parse_tags(RenderContext *state, char *p, char *end, double pwr,
                     // be either a backslash-argument or simply the last argument.
                     if (*r == '\\') {
                         has_backslash_arg = true;
-                        while (*r != ')' && r != end)
-                            ++r;
+                        char *paren = memchr(r, ')', end - r);
+                        if (paren)
+                            r = paren;
+                        else
+                            r = end;
                     }
                     push_arg(args, &nargs, q, r);
                     q = r;
