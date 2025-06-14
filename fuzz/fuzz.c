@@ -23,7 +23,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <io.h>
+#else
 #include <unistd.h>
+#endif
 #include "ass.h"
 #include "ass_types.h"
 
@@ -32,6 +36,15 @@
 #define FUZZMODE_LIBFUZZER        2
 #ifndef ASS_FUZZMODE
     #define ASS_FUZZMODE FUZZMODE_STANDALONE
+#endif
+
+// Limit maximal processed size in continuous fuzzing;
+// to be used when the fuzzing setup doesn't expose its own max size control.
+// Has no effect in standalone builds
+#ifdef ASSFUZZ_MAX_LEN
+    #define LEN_IN_RANGE(s) ((s) <= (ASSFUZZ_MAX_LEN))
+#else
+    #define LEN_IN_RANGE(s) true
 #endif
 
 // MSAN: will trigger MSAN if any pixel in bitmap not written to (costly)
@@ -117,7 +130,7 @@ static bool init(void)
 }
 
 
-static inline void process_image(ASS_Image* imgs)
+static inline void process_image(ASS_Image *imgs)
 {
     for (; imgs; imgs = imgs->next) {
         assert(imgs->w >= 0 && imgs->h >= 0 &&
@@ -153,22 +166,39 @@ static void consume_track(ASS_Renderer *renderer, ASS_Track *track)
 }
 
 #if ASS_FUZZMODE == FUZZMODE_STANDALONE
+#include "writeout.h"
+
+struct settings {
+    enum {
+        CONSUME_INPUT,
+        WRITEOUT_TRACK
+    } mode;
+    const char *input; // path or "-" for stdin
+    const char *output; // path or NULL for tmp file
+};
+
+#ifdef _WIN32
+#define READ_RET int
+#else
+#define READ_RET ssize_t
+#endif
+
 static ASS_Track *read_track_from_stdin(void)
 {
     size_t smax = 4096;
-    char* buf = malloc(smax);
+    char *buf = malloc(smax);
     if (!buf)
         goto error;
     size_t s = 0;
-    ssize_t read_b = 0;
+    READ_RET read_b = 0;
     do {
         // AFL++ docs recommend using raw file descriptors
         // to avoid buffering issues with stdin
-        read_b = read(STDIN_FILENO, buf + s, smax - s);
+        read_b = read(fileno(stdin), buf + s, smax - s);
         s += read_b > 0 ? read_b : 0;
         if (s == smax) {
             size_t new_smax = smax > SIZE_MAX / 2 ? SIZE_MAX : smax * 2;
-            char* new_buf = realloc(buf, new_smax);
+            char *new_buf = realloc(buf, new_smax);
             if (!new_buf || new_smax <= smax) {
                 free(new_buf ? new_buf : buf);
                 goto error;
@@ -184,6 +214,64 @@ static ASS_Track *read_track_from_stdin(void)
 error:
     printf("Input too large!\n");
     return NULL;
+}
+
+/**
+ * \param argc
+ * \param argv
+ * \param settings will be filled according to parsed args or defaults
+ * \return whether CLI args could be parsed successfully
+ */
+static bool parse_cmdline(int argc, char *argv[], struct settings *settings)
+{
+    // defaults
+    settings->mode = CONSUME_INPUT;
+    settings->input = NULL;
+    settings->output = NULL;
+
+    int i;
+    for (i = 1; i < argc; i++) {
+        const char *param = argv[i];
+        if (!param || param[0] != '-' || !param[1])
+            goto no_more_args;
+
+        switch (param[1]) {
+        case 'q':
+            quiet = true;
+            break;
+
+        case 'o':
+            settings->mode = WRITEOUT_TRACK;
+            // optional argument
+            if (argc - i > 1 && argv[i + 1][0] != '-') {
+                settings->output = argv[i + 1];
+                i++;
+            }
+            break;
+
+        case '-':
+            if (param[2]) {
+                return false;
+            } else {
+                i++;
+                goto no_more_args;
+            }
+
+        default:
+            return false;
+        }
+
+        continue;
+
+no_more_args:
+        break;
+    }
+
+    if (argc < 2 || argc - i > 1 || argc == i)
+        return false;
+
+    settings->input = argv[argc - 1];
+    return !!settings->input;
 }
 
 int main(int argc, char *argv[])
@@ -206,16 +294,18 @@ int main(int argc, char *argv[])
     ASS_Track *track = NULL;
     int retval = FUZZ_OK;
 
-    if (argc < 2 || argc > 3 ||
-            (argc == 3 && strcmp(argv[1], "-q")) ) {
-        printf("usage: %s [-q] <subtitle file>\n", argc ? argv[0] : "fuzz");
+    struct settings settings;
+    if (!parse_cmdline(argc, argv, &settings)) {
+        printf("usage: %s [-q] [-o [output_file]] [--] <subtitle file>\n"
+               "  -q:\n"
+               "    Hide libass log messages\n"
+               "\n"
+               "  -o [FILE]:\n"
+               "    Write out parsed file content in a standardized form\n"
+               "    into FILE or if omitted a generated temporary file.\n"
+               "    If used the input file will not be processed, only parsed.\n",
+               argc ? argv[0] : "fuzz");
         return FUZZ_BAD_USAGE;
-    }
-
-    size_t fileidx = 1;
-    if (argc == 3) {
-        quiet = true;
-        fileidx = 2;
     }
 
     if (!init()) {
@@ -224,8 +314,8 @@ int main(int argc, char *argv[])
         goto cleanup;
     }
 
-    if (strcmp(argv[fileidx], "-"))
-        track = ass_read_file(ass_library, argv[fileidx], NULL);
+    if (strcmp(settings.input, "-"))
+        track = ass_read_file(ass_library, settings.input, NULL);
     else
         track = read_track_from_stdin();
 
@@ -235,7 +325,15 @@ int main(int argc, char *argv[])
         goto cleanup;
     }
 
-    consume_track(ass_renderer, track);
+    switch (settings.mode) {
+    case CONSUME_INPUT:
+        consume_track(ass_renderer, track);
+        break;
+
+    case WRITEOUT_TRACK:
+        write_out_track(track, settings.output);
+        break;
+    }
 
 cleanup:
     if (track)        ass_free_track(track);
@@ -267,6 +365,8 @@ int main(int argc, char *argv[])
     buf = __AFL_FUZZ_TESTCASE_BUF;
     while (__AFL_LOOP(100000)) {
         len = __AFL_FUZZ_TESTCASE_LEN;
+        if (!LEN_IN_RANGE(len))
+            continue;
 
         if (!init_renderer()) {
             printf("Failing renderer init, skipping a sample!\n");
@@ -292,9 +392,17 @@ int main(int argc, char *argv[])
 #elif ASS_FUZZMODE == FUZZMODE_LIBFUZZER
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 {
+    // OSS Fuzz docs recommend just returning 0 on too large input
+    // libFuzzer docs tell us to use -1 to prevent addition to corpus
+    // BUT HongFuzz' LLVMFuzzerTestOneInput hook can't handle it and
+    // neither does OSS Fuzz convert this in their wrapper, see:
+    // https://github.com/google/oss-fuzz/issues/11983
+    if (!LEN_IN_RANGE(size))
+        return 0;
+
     ASS_Track *track = NULL;
 
-    // All return values but zero are reserved
+    // All return values but zero and -1 are reserved
     if (!init())
         return 0;
 

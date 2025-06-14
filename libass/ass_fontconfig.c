@@ -105,8 +105,11 @@ static bool scan_fonts(FcConfig *config, ASS_FontProvider *provider)
     // trim=FcFalse returns all system fonts
     fonts = FcFontSort(config, pat, FcFalse, NULL, &res);
     FcPatternDestroy(pat);
-    if (res != FcResultMatch)
+    if (res != FcResultMatch) {
+        if (fonts)
+            FcFontSetDestroy(fonts);
         return false;
+    }
 
     // fill font_info list
     for (i = 0; i < fonts->nfont; i++) {
@@ -240,8 +243,11 @@ static void cache_fallbacks(ProviderPrivate *fc)
 
     // If this fails, just add an empty set
     // (if it fails, cache_fallbacks will just be reattempted later)
-    if (result != FcResultMatch)
+    if (result != FcResultMatch) {
+        if (fc->fallbacks)
+            FcFontSetDestroy(fc->fallbacks);
         fc->fallbacks = FcFontSetCreate();
+    }
 
     FcPatternDestroy(pat);
 }
@@ -383,7 +389,7 @@ ass_fontconfig_add_provider(ASS_Library *lib, ASS_FontSelector *selector,
 
     // build database from system fonts
     if (!scan_fonts(fc->config, provider))
-        ass_msg(lib, MSGL_ERR, "Failed to load fonctconfig fonts!");
+        ass_msg(lib, MSGL_ERR, "Failed to load fontconfig fonts!");
 
     return provider;
 }

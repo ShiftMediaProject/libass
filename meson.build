@@ -4,7 +4,7 @@ project(
     license: 'ISC',
     meson_version: '>= 0.64.0',
     default_options: [
-        'c_std=c99',
+        'c_std=gnu99',
         'buildtype=debugoptimized',
         'warning_level=2',
         'default_library=static',
@@ -14,7 +14,7 @@ project(
 
 conf = configuration_data()
 deps = []
-test_deps = []
+png_deps = []
 
 host_system = host_machine.system()
 
@@ -25,8 +25,10 @@ cc = meson.get_compiler('c')
 cc_warnings = []
 cc_features = []
 
-if cc.get_id() != 'msvc'
-    cc_features += ['-D_POSIX_C_SOURCE=200809L', '-fno-math-errno']
+if cc.get_id() == 'clang-cl'
+    cc_features += '/clang:-fno-math-errno'
+elif cc.get_id() != 'msvc'
+    cc_features += ['-D_GNU_SOURCE', '-D_XPLATFORM_SOURCE', '-fno-math-errno']
 endif
 
 if cc.get_argument_syntax() == 'gcc'
@@ -38,6 +40,16 @@ if cc.get_argument_syntax() == 'gcc'
         '-Wpointer-arith',
         '-Wredundant-decls',
         '-Wno-missing-field-initializers',
+        '-Wformat-non-iso',
+        '-Werror=format-non-iso',
+    ]
+elif cc.get_id() == 'msvc'
+    cc_warnings += [
+        '/we4013', # implicit function definition
+        '/we4775', # non-standard format strings
+        '/we4317', # not enough arguments for format string
+        '/we4473', # same as above
+        '/we4474', # too many arguments for format string
     ]
 endif
 
@@ -116,8 +128,12 @@ if libunibreak_dep.found()
     conf.set('CONFIG_UNIBREAK', 1)
 endif
 
-if get_option('test')
-    test_deps += dependency('libpng', version: '>= 1.2.0')
+png_dep = dependency(
+    'libpng',
+    version: '>= 1.2.0',
+    required: get_option('test').enabled() or get_option('compare').enabled())
+if png_dep.found()
+    png_deps += png_dep
     conf.set('CONFIG_LIBPNG', 1)
 endif
 
@@ -135,7 +151,7 @@ if fontconfig
     font_providers += ['Fontconfig']
 endif
 
-# CoreText
+# Core Text
 coretext = false
 if not get_option('coretext').disabled()
     appservices_dep = dependency(
@@ -158,7 +174,7 @@ if not get_option('coretext').disabled()
         deps += appservices_dep
         conf.set('CONFIG_CORETEXT', 1)
         coretext = true
-        font_providers += ['CoreText']
+        font_providers += ['Core Text']
     else
         coretext_dep = dependency(
             'appleframeworks',
@@ -170,7 +186,7 @@ if not get_option('coretext').disabled()
             deps += coretext_dep
             conf.set('CONFIG_CORETEXT', 1)
             coretext = true
-            font_providers += ['CoreText']
+            font_providers += ['Core Text']
         endif
     endif
 endif
@@ -207,15 +223,16 @@ endif
 
 if get_option('coretext').enabled() and coretext == false
     error(
-        'CoreText support was requested, but it was not found.',
+        'Core Text support was requested, but it was not found.',
     )
 endif
 
 if get_option('require-system-font-provider')
     if font_providers.length() == 0
         error(
-            'Either DirectWrite (on Windows), CoreText (on OSX), or Fontconfig (Linux, ' +
-            'other) is required. If you really want to compile without a system font ' +
+            'At least one of DirectWrite (Windows-exclusive), ' +
+            'Core Text (Apple-exclusive), or Fontconfig is required. ' +
+            'If you really want to compile without a system font ' +
             'provider, set -Drequire-system-font-provider=false',
         )
     endif
@@ -233,21 +250,21 @@ asm_args = []
 
 # ASM architecture variables
 asm_option = get_option('asm')
-cpu_subfamily = host_machine.cpu_family()
-if cpu_subfamily.startswith('x86')
-    cpu_family = 'x86'
+cpu_family = host_machine.cpu_family()
+if cpu_family.startswith('x86')
+    generic_cpu_family = 'x86'
 else
-    cpu_family = cpu_subfamily
+    generic_cpu_family = cpu_family
 endif
 
 if not asm_option.disabled()
-    if cpu_family == 'x86'
+    if generic_cpu_family == 'x86'
         asm_is_nasm = add_languages(
             'nasm',
             required: false,
             native: false,
         )
-        if not asm_is_nasm
+        if not asm_is_nasm or meson.get_compiler('nasm').get_id() != 'nasm'
             warning(
                 'nasm was not found; ASM functions are disabled. Install nasm ' +
                 '>= 2.10 for a significantly faster libass build.',
@@ -268,7 +285,7 @@ if not asm_option.disabled()
             conf.set('ARCH_X86', 1)
             nasm_args = ['-Dprivate_prefix=ass', '-DPIC=1']
 
-            if cpu_subfamily == 'x86_64'
+            if cpu_family == 'x86_64'
                 conf.set('ARCH_X86_64', 1)
                 nasm_args += '-DARCH_X86_64=1'
             else
@@ -276,26 +293,26 @@ if not asm_option.disabled()
             endif
 
             if host_system in ['windows', 'cygwin']
-                if cpu_subfamily == 'x86'
+                if cpu_family == 'x86'
                     nasm_args += '-DPREFIX'
                 endif
             elif host_system == 'darwin'
                 nasm_args += ['-DPREFIX', '-DSTACK_ALIGNMENT=16']
-            elif host_system in ['linux', 'sunos', 'haiku', 'gnu']
+            elif host_system in ['linux', 'sunos', 'haiku', 'gnu', 'android']
                 nasm_args += ['-DSTACK_ALIGNMENT=16']
             elif host_system == 'dragonfly' or host_system.endswith('bsd')
                 nasm_args += []
             else
                 error(
                     'Please contact libass upstream to figure out if ASM support ' +
-                    'for your platform can be added. In the meantime you will need ' +
-                    'to use -Dasm=disabled.',
+                    'for your platform @0@ can be added. '.format(host_system) +
+                    'In the meantime you will need to use -Dasm=disabled.',
                 )
             endif
 
             add_project_arguments(nasm_args, language: 'nasm')
         endif
-    elif cpu_subfamily == 'aarch64'
+    elif generic_cpu_family == 'aarch64'
         enable_asm = true
         conf.set('ARCH_AARCH64', 1)
         if host_system == 'darwin'
@@ -304,7 +321,7 @@ if not asm_option.disabled()
     else
         warning(
             'Assembly optimizations are not yet supported for the "@0@" architecture; disabling.'.format(
-                cpu_subfamily,
+                cpu_family,
             ),
         )
     endif
@@ -368,11 +385,20 @@ else
     libass_for_tools = libass
 endif
 
-if get_option('test')
+if get_option('test').enabled()
     subdir('test')
 endif
-if get_option('profile')
+if get_option('compare').enabled()
+    subdir('compare')
+endif
+if get_option('profile').enabled()
     subdir('profile')
+endif
+if get_option('fuzz').enabled()
+    subdir('fuzz')
+endif
+if get_option('checkasm').require(enable_asm).allowed()
+    subdir('checkasm')
 endif
 
 # libass.pc

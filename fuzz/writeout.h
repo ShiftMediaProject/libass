@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2022 libass contributors
+ * Copyright (C) 2024 libass contributors
  *
  * This file is part of libass.
  *
@@ -16,20 +16,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include "config.h"
-#include "ass_compat.h"
+#include "ass_types.h"
 
-#include <assert.h>
-
-#include "ass_rasterizer.h"
-
-
-#define ALIGNMENT  16
-
-#define TILE_SIZE  16
-#include "rasterizer_template.h"
-#undef TILE_SIZE
-
-#define TILE_SIZE  32
-#include "rasterizer_template.h"
-#undef TILE_SIZE
+void write_out_track(ASS_Track *track, const char *outpath);

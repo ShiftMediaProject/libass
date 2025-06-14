@@ -1,14 +1,10 @@
-[![Build status](https://github.com/libass/libass/actions/workflows/ghci.yml/badge.svg?branch=master&event=push)](https://github.com/libass/libass/actions/workflows/ghci.yml?query=branch%3Amaster+event%3Apush)
-
-[![Coverity scan build status](https://scan.coverity.com/projects/3531/badge.svg)](https://scan.coverity.com/projects/3531)
-
-libass
+libass [![Coverity scan build status](https://scan.coverity.com/projects/3531/badge.svg)](https://scan.coverity.com/projects/3531) [![Build status](https://github.com/libass/libass/actions/workflows/ghci.yml/badge.svg?branch=master&event=push)](https://github.com/libass/libass/actions/workflows/ghci.yml?query=branch%3Amaster+event%3Apush)
 ======
 libass is a portable subtitle renderer for the ASS/SSA (Advanced Substation Alpha/Substation Alpha) subtitle format. It is mostly compatible with VSFilter.
 
 Get it
 ======
-See [GitHub releases](https://github.com/libass/libass/releases) for the latest release 0.17.3 (released 2024-07-02).
+See [GitHub releases](https://github.com/libass/libass/releases) for the latest release 0.17.4 (released 2025-06-07).
 See the [changelog](https://github.com/libass/libass/blob/master/Changelog) for a detailed list of changes.
 
 Source code is available from our [GitHub repository](https://github.com/libass/libass).
@@ -34,6 +30,17 @@ Windows. It is suited for static-only builds on any platform well supported by
 Meson and as a Meson subproject.
 Notably, Meson supports MSVC and generation of VS project files.
 
+Macro defines
+-------------
+
+Unless developing libass there’s usually no need to manually define macros
+and there are no stability guarantees for these manual defines.
+
+- `DEBUG_LEVEL=0..3`
+  - `0` use the default set of asserts; implied if macro is not defined at all
+  - `1`, `2` *unused*
+  - `3` additionally assert assumptions usually pledged to the compiler for optimization purposes
+
 Information about the ASS format:
 =================================
 - [ASS format overview](https://github.com/libass/libass/wiki/ASS-File-Format-Guide)
@@ -57,3 +64,8 @@ Other ASS/SSA implementations:
 - [asa](https://web.archive.org/web/20110906033709/http://asa.diac24.net/) (defunct)
 - [libjass](https://github.com/Arnavion/libjass) (defunct)
 - [ASS.js](https://github.com/weizhenye/ASS)
+
+Packaging status
+================
+
+[![Packaging status](https://repology.org/badge/vertical-allrepos/libass.svg?columns=3&header=libass&exclude_unsupported=1)](https://repology.org/project/libass/versions)

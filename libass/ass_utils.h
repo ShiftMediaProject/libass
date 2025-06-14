@@ -30,6 +30,10 @@
 #include <limits.h>
 #include <math.h>
 
+#if defined(_MSC_VER) && !defined(__clang__)
+#include <intrin.h>
+#endif
+
 #include "ass.h"
 
 #ifndef SIZE_MAX
@@ -50,6 +54,18 @@
 #define ASS_PI 3.14159265358979323846
 
 #define FEATURE_MASK(feat) (((uint32_t) 1) << (feat))
+
+#if DEBUG_LEVEL >= 3
+    #define ASSUME(x) assert(x)
+#elif __has_builtin(__builtin_assume)
+    #define ASSUME(x) __builtin_assume(x)
+#elif defined(_MSC_VER)
+    #define ASSUME(x) __assume(x)
+#elif __has_builtin(__builtin_unreachable)
+    #define ASSUME(x) if (!(x)) __builtin_unreachable()
+#else
+    #define ASSUME(x) (void)0
+#endif
 
 typedef struct {
     const char *str;
@@ -159,6 +175,17 @@ static inline uint32_t ass_bswap32(uint32_t x)
 #endif
 }
 
+static inline long ass_lrint(double x)
+{
+#if defined(_MSC_VER) && !defined(__clang__) && !defined(_M_ARM64EC) && (defined(_M_X64) || _M_IX86_FP == 2)
+    // Unlike GCC and Clang, Visual C++ can't inline lrint() without -fp:fast, so
+    // we provide our own implementation
+    return _mm_cvtsd_si32(_mm_set_sd(x));
+#else
+    return lrint(x);
+#endif
+}
+
 static inline int d6_to_int(int x)
 {
     return (x + 32) >> 6;
@@ -189,7 +216,7 @@ static inline double d6_to_double(int x)
 }
 static inline int double_to_d6(double x)
 {
-    return lrint(x * 64);
+    return ass_lrint(x * 64);
 }
 static inline double d16_to_double(int x)
 {
@@ -197,7 +224,7 @@ static inline double d16_to_double(int x)
 }
 static inline int double_to_d16(double x)
 {
-    return lrint(x * 0x10000);
+    return ass_lrint(x * 0x10000);
 }
 static inline double d22_to_double(int x)
 {
@@ -205,7 +232,7 @@ static inline double d22_to_double(int x)
 }
 static inline int double_to_d22(double x)
 {
-    return lrint(x * 0x400000);
+    return ass_lrint(x * 0x400000);
 }
 
 static inline int32_t lshiftwrapi(int32_t i, int32_t shift)

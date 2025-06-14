@@ -25,14 +25,20 @@
 #include "ass_utils.h"
 
 
+#define ALIGNMENT  16
+
 /**
  * \brief Add two bitmaps together at a given position
  * Uses additive blending, clipped to [0,255]. Pure C implementation.
  */
-void ass_add_bitmaps_c(uint8_t *dst, ptrdiff_t dst_stride,
-                       const uint8_t *src, ptrdiff_t src_stride,
+void ass_add_bitmaps_c(uint8_t *restrict dst, ptrdiff_t dst_stride,
+                       const uint8_t *restrict src, ptrdiff_t src_stride,
                        size_t width, size_t height)
 {
+    ASSUME(!(dst_stride % ALIGNMENT));
+    ASSUME(!(src_stride % ALIGNMENT));
+    ASSUME(width > 0 && height > 0);
+
     uint8_t *end = dst + dst_stride * height;
     while (dst < end) {
         for (size_t x = 0; x < width; x++) {
@@ -44,10 +50,14 @@ void ass_add_bitmaps_c(uint8_t *dst, ptrdiff_t dst_stride,
     }
 }
 
-void ass_imul_bitmaps_c(uint8_t *dst, ptrdiff_t dst_stride,
-                        const uint8_t *src, ptrdiff_t src_stride,
+void ass_imul_bitmaps_c(uint8_t *restrict dst, ptrdiff_t dst_stride,
+                        const uint8_t *restrict src, ptrdiff_t src_stride,
                         size_t width, size_t height)
 {
+    ASSUME(!(dst_stride % ALIGNMENT));
+    ASSUME(!(src_stride % ALIGNMENT));
+    ASSUME(width > 0 && height > 0);
+
     uint8_t *end = dst + dst_stride * height;
     while (dst < end) {
         for (size_t x = 0; x < width; x++) {
@@ -58,11 +68,16 @@ void ass_imul_bitmaps_c(uint8_t *dst, ptrdiff_t dst_stride,
     }
 }
 
-void ass_mul_bitmaps_c(uint8_t *dst, ptrdiff_t dst_stride,
-                       const uint8_t *src1, ptrdiff_t src1_stride,
-                       const uint8_t *src2, ptrdiff_t src2_stride,
+void ass_mul_bitmaps_c(uint8_t *restrict dst, ptrdiff_t dst_stride,
+                       const uint8_t *restrict src1, ptrdiff_t src1_stride,
+                       const uint8_t *restrict src2, ptrdiff_t src2_stride,
                        size_t width, size_t height)
 {
+    ASSUME(!((uintptr_t) dst % ALIGNMENT) && !(dst_stride % ALIGNMENT));
+    ASSUME(!(src1_stride % ALIGNMENT));
+    ASSUME(!(src2_stride % ALIGNMENT));
+    ASSUME(width > 0 && height > 0);
+
     uint8_t *end = dst + dst_stride * height;
     while (dst < end) {
         for (size_t x = 0; x < width; x++) {

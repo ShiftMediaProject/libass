@@ -419,7 +419,7 @@ static ASS_Image **render_glyph_i(RenderContext *state,
  * \param brk x coordinate relative to glyph origin, color is used to the left of brk, color2 - to the right
  * \param tail pointer to the last image's next field, head of the generated list should be stored here
  * \return pointer to the new list tail
- * Performs clipping. Uses my_draw_bitmap for actual bitmap convertion.
+ * Performs clipping. Uses my_draw_bitmap for actual bitmap conversion.
  */
 static ASS_Image **
 render_glyph(RenderContext *state, Bitmap *bm, int dst_x, int dst_y,
@@ -542,7 +542,7 @@ static bool quantize_transform(double m[3][3], ASS_Vector *pos,
         center[i] -= delta[i];
         if (!(fabs(center[i]) < max_val))
             return false;
-        qr[i] = lrint(center[i]);
+        qr[i] = ass_lrint(center[i]);
     }
 
     // Minimal bounding box z coordinate
@@ -590,7 +590,7 @@ static bool quantize_transform(double m[3][3], ASS_Vector *pos,
     // Total error is larger than each ACCURACY, but still of the same magnitude.
     // Via our choice of ACCURACY, we get a total error of up to several POSITION_PRECISION.
 
-    // Quantization steps (pick: ACCURARY = POSITION_PRECISION):
+    // Quantization steps (pick: ACCURACY = POSITION_PRECISION):
     // D(m_xx), D(m_yx) ~ q_x = POSITION_PRECISION * z0 / dx,
     // D(m_xy), D(m_yy) ~ q_y = POSITION_PRECISION * z0 / dy,
     // qm_xx = round(m_xx / q_x), qm_xy = round(m_xy / q_y),
@@ -602,7 +602,7 @@ static bool quantize_transform(double m[3][3], ASS_Vector *pos,
             double val = m[i][j] * mul[j];
             if (!(fabs(val) < max_val))
                 return false;
-            qm[i][j] = lrint(val);
+            qm[i][j] = ass_lrint(val);
         }
 
     // x_lim = |m_xx| * dx + |m_xy| * dy
@@ -629,7 +629,7 @@ static bool quantize_transform(double m[3][3], ASS_Vector *pos,
         double val = m[2][j] * mul[j];
         if (!(fabs(val) < max_val))
             return false;
-        qm[2][j] = lrint(val);
+        qm[2][j] = ass_lrint(val);
     }
 
     if (first && offset) {
@@ -981,6 +981,9 @@ static ASS_Style *handle_selective_style_overrides(RenderContext *state,
         new->Shadow = user->Shadow * scale;
     }
 
+    if (requested & ASS_OVERRIDE_BIT_BLUR)
+        new->Blur = user->Blur * scale;
+
     if (requested & ASS_OVERRIDE_BIT_ALIGNMENT)
         new->Alignment = user->Alignment;
 
@@ -1215,17 +1218,17 @@ get_outline_glyph(RenderContext *state, GlyphInfo *info)
     info->transform.scale = scale;
     info->transform.offset = offset;
 
-    info->bbox.x_min = lrint(val->cbox.x_min * scale.x + offset.x);
-    info->bbox.y_min = lrint(val->cbox.y_min * scale.y + offset.y);
-    info->bbox.x_max = lrint(val->cbox.x_max * scale.x + offset.x);
-    info->bbox.y_max = lrint(val->cbox.y_max * scale.y + offset.y);
+    info->bbox.x_min = ass_lrint(val->cbox.x_min * scale.x + offset.x);
+    info->bbox.y_min = ass_lrint(val->cbox.y_min * scale.y + offset.y);
+    info->bbox.x_max = ass_lrint(val->cbox.x_max * scale.x + offset.x);
+    info->bbox.y_max = ass_lrint(val->cbox.y_max * scale.y + offset.y);
 
     if (info->drawing_text.str || priv->settings.shaper == ASS_SHAPING_SIMPLE) {
-        info->cluster_advance.x = info->advance.x = lrint(val->advance * scale.x);
+        info->cluster_advance.x = info->advance.x = ass_lrint(val->advance * scale.x);
         info->cluster_advance.y = info->advance.y = 0;
     }
-    info->asc  = lrint(asc  * scale.y);
-    info->desc = lrint(desc * scale.y);
+    info->asc  = ass_lrint(asc  * scale.y);
+    info->desc = ass_lrint(desc * scale.y);
 }
 
 size_t ass_outline_construct(void *key, void *value, void *priv)
@@ -1511,8 +1514,8 @@ get_bitmap_glyph(RenderContext *state, GlyphInfo *info,
         bord_y = ldexp(bord_y, k->scale_ord_y);
         if (!(bord_x < OUTLINE_MAX && bord_y < OUTLINE_MAX))
             return;
-        k->border.x = lrint(bord_x / STROKER_PRECISION);
-        k->border.y = lrint(bord_y / STROKER_PRECISION);
+        k->border.x = ass_lrint(bord_x / STROKER_PRECISION);
+        k->border.y = ass_lrint(bord_y / STROKER_PRECISION);
         if (!k->border.x && !k->border.y) {
             info->bm_o = info->bm;
             return;
@@ -2458,7 +2461,7 @@ static int quantize_blur(double radius, int32_t *shadow_mask)
     // floor(log2(x)) = frexp(x) - 1 = frexp(x / 2).
     frexp((1 + radius) * (POSITION_PRECISION / 2), &ord);
     *shadow_mask = ((uint32_t) 1 << ord) - 1;
-    return lrint(log1p(radius) / BLUR_PRECISION);
+    return ass_lrint(log1p(radius) / BLUR_PRECISION);
 }
 
 static double restore_blur(int qblur)
@@ -2883,7 +2886,7 @@ ass_render_event(RenderContext *state, ASS_Event *event,
 
     align_lines(state, max_text_width);
 
-    // determing text bounding box
+    // determine text bounding box
     ASS_DRect bbox;
     compute_string_bbox(text_info, &bbox);
 
@@ -3427,6 +3430,9 @@ ASS_Image *ass_render_frame(ASS_Renderer *priv, ASS_Track *track,
     // free the previous image list
     ass_frame_unref(priv->prev_images_root);
     priv->prev_images_root = NULL;
+
+    if (track->parser_priv->prune_delay >= 0)
+        ass_prune_events(track, now - track->parser_priv->prune_delay);
 
     return priv->images_root;
 }

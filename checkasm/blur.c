@@ -16,6 +16,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "ass_compat.h"
+
 #include "ass_utils.h"
 #include "checkasm.h"
 
@@ -153,7 +155,7 @@ static void check_param_filter(ParamFilterFunc func, const char *name, int n, in
 
             int left = 0x8000;
             for (int i = 0; i < n; i++) {
-                param[i] = rnd() % (left + 1);
+                param[i] = rnd() % FFMIN(left + 1, 0x8000);
                 left -= param[i];
             }
 

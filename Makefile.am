@@ -1,12 +1,25 @@
 ACLOCAL_AMFLAGS = -I m4
 AM_CPPFLAGS = -I$(top_srcdir)/libass
-AM_CFLAGS = -std=gnu99 -D_GNU_SOURCE
+
+# Using gnu99 to gain compatibility between const and
+# non-const array types without needing to jump to ISO C23.
+# Otherwise intended to be compatible with ISO C.
+#
+# Similarly we only strictly _need_ ISO C APIs, but we’ll use
+# some additional APIs from e.g. GNU and POSIX when available.
+# Unfortunately defining _POSIX_C_SOURCE may end up hiding additional
+# non-POSIX interfaces even if their respective feature macro is set too.
+# However, POSIX interfaces are usually implicitly enabled
+# with other feature macros, thus omit the POSIX one.
+AM_CFLAGS = -std=gnu99 -D_GNU_SOURCE -D_XPLATFORM_SOURCE
 
 EXTRA_DIST = libass.pc.in Changelog MAINTAINERS RELEASEVERSION ltnasm.sh
 
 # Meson build setup
 EXTRA_DIST += gen_defs.py meson_options.txt meson.build \
               libass/meson.build libass/ass/meson.build \
+              fuzz/meson.build checkasm/meson.build \
+              compare/meson.build \
               profile/meson.build test/meson.build
 
 pkgconfigdir = $(libdir)/pkgconfig
