@@ -1,8 +1,8 @@
 diff --git a/libass/ass_compat.h b/libass/ass_compat.h
-index 52ac282..852d801 100644
+index cdb58ce..a03638f 100644
 --- a/libass/ass_compat.h
 +++ b/libass/ass_compat.h
-@@ -24,6 +24,10 @@
+@@ -28,6 +28,10 @@
  #define _CRT_SECURE_NO_WARNINGS
  #define _USE_MATH_DEFINES
  #define inline __inline
